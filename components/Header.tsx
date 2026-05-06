@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, ClipboardList, Pencil } from "lucide-react";
+import { Search, ClipboardList, Pencil, History } from "lucide-react";
 import { useRoom } from "./providers";
 import { ROOMS } from "@/lib/types";
 
@@ -11,6 +11,9 @@ export function Header() {
   const { room, setRoom } = useRoom();
 
   const isSupplySide = pathname.startsWith("/status");
+  const isHistory =
+    pathname === "/status/history" || pathname.startsWith("/status/history/");
+  const isStatusList = isSupplySide && !isHistory;
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink-line bg-white">
@@ -28,8 +31,11 @@ export function Header() {
           <NavLink href="/" active={pathname === "/"}>
             <Search size={16} aria-hidden /> 物品検索
           </NavLink>
-          <NavLink href="/status" active={isSupplySide}>
+          <NavLink href="/status" active={isStatusList}>
             <ClipboardList size={16} aria-hidden /> 受付状況
+          </NavLink>
+          <NavLink href="/status/history" active={isHistory}>
+            <History size={16} aria-hidden /> 履歴
           </NavLink>
         </nav>
 

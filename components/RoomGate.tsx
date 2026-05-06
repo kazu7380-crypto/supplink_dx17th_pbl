@@ -18,7 +18,12 @@ export function RoomGate({ children }: { children: React.ReactNode }) {
 
   if (!room) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center px-4">
+      <div className="flex min-h-[60vh] flex-col items-center justify-center px-4">
+        <img
+          src="/sapurink_image.png"
+          alt="サプリンク"
+          className="mb-6 h-64 w-auto"
+        />
         <div className="w-full max-w-md rounded-lg border border-ink-line bg-white p-6 shadow-sm">
           <h2 className="text-lg font-semibold">手術室を選択してください</h2>
           <p className="mt-1 text-sm text-ink-muted">
