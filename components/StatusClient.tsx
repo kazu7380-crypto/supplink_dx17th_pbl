@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Bell, BellOff, CheckCircle2, Circle, Wifi, WifiOff } from "lucide-react";
 import type { Item, Order } from "@/lib/types";
 import { alarm, unlockAudio } from "@/lib/beep";
+import { upsertHistory, upsertManyHistory } from "@/lib/historyStore";
 
 type Props = { items: Item[]; initialOrders: Order[] };
 
@@ -25,6 +26,10 @@ export function StatusClient({ items, initialOrders }: Props) {
   useEffect(() => {
     audioOnRef.current = audioOn;
   }, [audioOn]);
+
+  useEffect(() => {
+    upsertManyHistory(initialOrders);
+  }, [initialOrders]);
 
   // Restore audio preference from localStorage and arm auto-unlock on first
   // user interaction so the user doesn't need to re-enable after a reload.
@@ -60,6 +65,7 @@ export function StatusClient({ items, initialOrders }: Props) {
         if (prev.some((o) => o.id === order.id)) return prev;
         return [order, ...prev];
       });
+      upsertHistory(order);
       if (audioOnRef.current) alarm();
       setFlash(`新規依頼: ${order.room}`);
       if (flashTimer.current) window.clearTimeout(flashTimer.current);
@@ -69,6 +75,7 @@ export function StatusClient({ items, initialOrders }: Props) {
     es.addEventListener("update", (ev) => {
       const order = JSON.parse((ev as MessageEvent).data) as Order;
       setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
+      upsertHistory(order);
     });
 
     return () => {
@@ -90,17 +97,20 @@ export function StatusClient({ items, initialOrders }: Props) {
   };
 
   const completeOrder = async (id: string) => {
-    setOrders((prev) =>
-      prev.map((o) =>
+    setOrders((prev) => {
+      const next = prev.map((o) =>
         o.id === id
           ? {
               ...o,
-              status: "completed",
+              status: "completed" as const,
               completedAt: new Date().toISOString(),
             }
           : o,
-      ),
-    );
+      );
+      const updated = next.find((o) => o.id === id);
+      if (updated) upsertHistory(updated);
+      return next;
+    });
     try {
       await fetch(`/api/orders/${id}`, {
         method: "PATCH",
