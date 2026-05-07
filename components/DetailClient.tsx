@@ -5,11 +5,14 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, CheckCircle2 } from "lucide-react";
 import type { Item, Order } from "@/lib/types";
+import { useItems } from "@/lib/useItems";
+import { ItemPhotoThumb } from "./ItemPhotoThumb";
 
 type Props = { items: Item[]; order: Order };
 
-export function DetailClient({ items, order: initialOrder }: Props) {
+export function DetailClient({ items: defaultItems, order: initialOrder }: Props) {
   const router = useRouter();
+  const items = useItems(defaultItems);
   const [order, setOrder] = useState<Order>(initialOrder);
   const [busy, setBusy] = useState(false);
 
@@ -73,6 +76,7 @@ export function DetailClient({ items, order: initialOrder }: Props) {
           <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-ink-muted">
             <tr>
               <th className="px-3 py-2">#</th>
+              <th className="px-3 py-2">写真</th>
               <th className="px-3 py-2">材料名</th>
               <th className="px-3 py-2">製品記号</th>
               <th className="px-3 py-2">棚番号</th>
@@ -90,6 +94,9 @@ export function DetailClient({ items, order: initialOrder }: Props) {
                 >
                   <td className="px-3 py-2 text-ink-muted">
                     {line.itemCode}
+                  </td>
+                  <td className="px-3 py-2">
+                    <ItemPhotoThumb code={line.itemCode} size={48} />
                   </td>
                   <td className="px-3 py-2 font-medium">{it?.name ?? "-"}</td>
                   <td className="px-3 py-2 text-ink-soft">{it?.spec ?? "-"}</td>

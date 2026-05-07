@@ -4,12 +4,15 @@ import { useMemo, useState } from "react";
 import { Search, X, Plus, Check } from "lucide-react";
 import { matches } from "@/lib/normalize";
 import type { Item } from "@/lib/types";
+import { useItems } from "@/lib/useItems";
 import { QuantityDialog } from "./QuantityDialog";
+import { ItemPhotoThumb } from "./ItemPhotoThumb";
 import { useCart } from "./providers";
 
 type Props = { items: Item[] };
 
-export function SearchClient({ items }: Props) {
+export function SearchClient({ items: defaultItems }: Props) {
+  const items = useItems(defaultItems);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<Item | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
@@ -93,10 +96,13 @@ export function SearchClient({ items }: Props) {
                   />
                 )}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-base font-semibold">{item.name}</div>
-                    <div className="truncate text-sm text-ink-soft">
-                      {item.spec}
+                  <div className="flex min-w-0 items-start gap-2">
+                    <ItemPhotoThumb code={item.code} size={48} />
+                    <div className="min-w-0">
+                      <div className="text-base font-semibold">{item.name}</div>
+                      <div className="truncate text-sm text-ink-soft">
+                        {item.spec}
+                      </div>
                     </div>
                   </div>
                   {inCart ? (

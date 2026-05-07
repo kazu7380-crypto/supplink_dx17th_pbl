@@ -4,6 +4,7 @@ export type Item = {
   spec: string;
   shelf: string;
   memo: string;
+  category?: string;
 };
 
 export type CartLine = {
