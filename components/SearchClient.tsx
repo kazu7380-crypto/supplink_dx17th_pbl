@@ -4,14 +4,19 @@ import { useMemo, useState } from "react";
 import { Search, X, Plus, Check } from "lucide-react";
 import { matches } from "@/lib/normalize";
 import type { Item } from "@/lib/types";
+import { useItems } from "@/lib/useItems";
 import { QuantityDialog } from "./QuantityDialog";
+import { ItemPhotoThumb } from "./ItemPhotoThumb";
+import { PhotoLightbox } from "./PhotoLightbox";
 import { useCart } from "./providers";
 
 type Props = { items: Item[] };
 
-export function SearchClient({ items }: Props) {
+export function SearchClient({ items: defaultItems }: Props) {
+  const items = useItems(defaultItems);
   const [query, setQuery] = useState("");
   const [picked, setPicked] = useState<Item | null>(null);
+  const [zoom, setZoom] = useState<Item | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const { add, setQuantity, remove, lines } = useCart();
 
@@ -71,16 +76,23 @@ export function SearchClient({ items }: Props) {
           const inCart = inCartQty > 0;
           return (
             <li key={item.code}>
-              <button
-                type="button"
+              <div
+                role="button"
+                tabIndex={0}
                 onClick={() => setPicked(item)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    setPicked(item);
+                  }
+                }}
                 aria-label={
                   inCart
                     ? `${item.name} ${item.spec} (カートに ${inCartQty} 個)`
                     : `${item.name} ${item.spec}`
                 }
                 className={[
-                  "group relative flex h-full w-full flex-col rounded-lg border p-3 text-left transition hover:shadow-sm",
+                  "group relative flex h-full w-full cursor-pointer flex-col rounded-lg border p-3 text-left transition hover:shadow-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-ink",
                   inCart
                     ? "border-ink bg-ink/[0.04] ring-1 ring-ink/30"
                     : "border-ink-line bg-white hover:border-ink",
@@ -93,10 +105,24 @@ export function SearchClient({ items }: Props) {
                   />
                 )}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <div className="text-base font-semibold">{item.name}</div>
-                    <div className="truncate text-sm text-ink-soft">
-                      {item.spec}
+                  <div className="flex min-w-0 items-start gap-2">
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setZoom(item);
+                      }}
+                      aria-label={`${item.name} の写真を拡大`}
+                      title="写真を拡大"
+                      className="cursor-zoom-in rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+                    >
+                      <ItemPhotoThumb code={item.code} size={48} />
+                    </button>
+                    <div className="min-w-0">
+                      <div className="text-base font-semibold">{item.name}</div>
+                      <div className="truncate text-sm text-ink-soft">
+                        {item.spec}
+                      </div>
                     </div>
                   </div>
                   {inCart ? (
@@ -120,7 +146,7 @@ export function SearchClient({ items }: Props) {
                     メモ: {item.memo}
                   </div>
                 )}
-              </button>
+              </div>
             </li>
           );
         })}
@@ -156,6 +182,8 @@ export function SearchClient({ items }: Props) {
           }}
         />
       )}
+
+      {zoom && <PhotoLightbox item={zoom} onClose={() => setZoom(null)} />}
     </div>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { X, Trash2 } from "lucide-react";
 import type { Item } from "@/lib/types";
+import { ItemPhotoThumb } from "./ItemPhotoThumb";
 
 type Props = {
   item: Item;
@@ -63,15 +64,18 @@ export function QuantityDialog({
     >
       <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-lg">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-base font-semibold">{item.name}</div>
-            <div className="text-sm text-ink-soft">{item.spec}</div>
-            <div className="mt-1 text-xs text-ink-muted">{item.shelf}</div>
-            {isUpdate && (
-              <div className="mt-2 inline-flex items-center gap-1 rounded bg-ink px-2 py-0.5 text-xs font-medium text-white">
-                現在カートに {currentQty} 個（上書き）
-              </div>
-            )}
+          <div className="flex min-w-0 items-start gap-3">
+            <ItemPhotoThumb code={item.code} size={64} />
+            <div className="min-w-0">
+              <div className="text-base font-semibold">{item.name}</div>
+              <div className="text-sm text-ink-soft">{item.spec}</div>
+              <div className="mt-1 text-xs text-ink-muted">{item.shelf}</div>
+              {isUpdate && (
+                <div className="mt-2 inline-flex items-center gap-1 rounded bg-ink px-2 py-0.5 text-xs font-medium text-white">
+                  現在カートに {currentQty} 個（上書き）
+                </div>
+              )}
+            </div>
           </div>
           <button
             type="button"

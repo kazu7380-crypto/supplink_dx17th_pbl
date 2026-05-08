@@ -6,12 +6,14 @@ import { Bell, BellOff, CheckCircle2, Circle, Wifi, WifiOff } from "lucide-react
 import type { Item, Order } from "@/lib/types";
 import { alarm, unlockAudio } from "@/lib/beep";
 import { upsertHistory, upsertManyHistory } from "@/lib/historyStore";
+import { useItems } from "@/lib/useItems";
 
 type Props = { items: Item[]; initialOrders: Order[] };
 
 const AUDIO_KEY = "or-supply-audio-on";
 
-export function StatusClient({ items, initialOrders }: Props) {
+export function StatusClient({ items: defaultItems, initialOrders }: Props) {
+  const items = useItems(defaultItems);
   const itemMap = useMemo(
     () => new Map(items.map((i) => [i.code, i])),
     [items],

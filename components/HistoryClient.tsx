@@ -4,12 +4,14 @@ import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import type { Item, Order, OrderStatus } from "@/lib/types";
 import { clearHistory, loadHistory } from "@/lib/historyStore";
+import { useItems } from "@/lib/useItems";
 
 type Props = { items: Item[] };
 
 type StatusFilter = "all" | OrderStatus;
 
-export function HistoryClient({ items }: Props) {
+export function HistoryClient({ items: defaultItems }: Props) {
+  const items = useItems(defaultItems);
   const itemMap = useMemo(
     () => new Map(items.map((i) => [i.code, i])),
     [items],

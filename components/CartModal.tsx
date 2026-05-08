@@ -11,8 +11,10 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useCart, useRoom } from "./providers";
-import { items as itemMaster } from "@/lib/items";
+import { items as defaultItems } from "@/lib/items";
+import { useItems } from "@/lib/useItems";
 import type { CartLine, Item } from "@/lib/types";
+import { ItemPhotoThumb } from "./ItemPhotoThumb";
 
 export function CartModal() {
   const { lines, setQuantity, remove, clear, count, isOpen, close } = useCart();
@@ -21,9 +23,10 @@ export function CartModal() {
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
+  const items = useItems(defaultItems);
   const itemMap = useMemo(
-    () => new Map(itemMaster.map((i) => [i.code, i])),
-    [],
+    () => new Map(items.map((i) => [i.code, i])),
+    [items],
   );
 
   useEffect(() => {
@@ -240,6 +243,7 @@ function CartLineRow({
 
   return (
     <li className="flex items-center gap-3 border-b border-ink-line p-3 last:border-b-0">
+      <ItemPhotoThumb code={item.code} size={48} />
       <div className="min-w-0 flex-1">
         <div className="font-semibold">{item.name}</div>
         <div className="truncate text-sm text-ink-soft">{item.spec}</div>
