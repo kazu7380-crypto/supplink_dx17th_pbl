@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
 import { orderStore } from "@/lib/db";
+import type { OrderStatus } from "@/lib/types";
+
+const ALLOWED_STATUSES: OrderStatus[] = ["requested", "picking", "delivered"];
 
 export const dynamic = "force-dynamic";
 
@@ -27,10 +30,13 @@ export async function PATCH(
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
   const status = (body as { status?: unknown })?.status;
-  if (status !== "completed") {
+  if (
+    typeof status !== "string" ||
+    !ALLOWED_STATUSES.includes(status as OrderStatus)
+  ) {
     return NextResponse.json({ error: "invalid status" }, { status: 400 });
   }
-  const order = orderStore.complete(id);
+  const order = orderStore.setStatus(id, status as OrderStatus);
   if (!order) {
     return NextResponse.json({ error: "not found" }, { status: 404 });
   }
