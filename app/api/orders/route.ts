@@ -5,7 +5,13 @@ import { ROOMS } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  return NextResponse.json(orderStore.list());
+  try {
+    const orders = await orderStore.list();
+    return NextResponse.json(orders);
+  } catch (e) {
+    console.error("[GET /api/orders]", e);
+    return NextResponse.json({ error: "fetch failed" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
@@ -51,6 +57,11 @@ export async function POST(request: Request) {
     cleaned.push({ itemCode, quantity });
   }
 
-  const order = orderStore.create({ room, lines: cleaned });
-  return NextResponse.json(order, { status: 201 });
+  try {
+    const order = await orderStore.create({ room, lines: cleaned });
+    return NextResponse.json(order, { status: 201 });
+  } catch (e) {
+    console.error("[POST /api/orders]", e);
+    return NextResponse.json({ error: "create failed" }, { status: 500 });
+  }
 }

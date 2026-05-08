@@ -8,10 +8,33 @@ import { ORDER_STATUS_LABEL } from "@/lib/types";
 import { alarm, unlockAudio } from "@/lib/beep";
 import { upsertHistory, upsertManyHistory } from "@/lib/historyStore";
 import { useItems } from "@/lib/useItems";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
 type Props = { items: Item[]; initialOrders: Order[] };
 
 const AUDIO_KEY = "or-supply-audio-on";
+
+type DbRow = {
+  id: string;
+  room: string;
+  lines: { itemCode: number; quantity: number }[];
+  status: OrderStatus;
+  created_at: string;
+  picked_at: string | null;
+  delivered_at: string | null;
+};
+
+function rowToOrder(row: DbRow): Order {
+  return {
+    id: row.id,
+    room: row.room,
+    lines: row.lines,
+    status: row.status,
+    createdAt: row.created_at,
+    pickedAt: row.picked_at ?? undefined,
+    deliveredAt: row.delivered_at ?? undefined,
+  };
+}
 
 export function StatusClient({ items: defaultItems, initialOrders }: Props) {
   const items = useItems(defaultItems);
@@ -25,6 +48,7 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
   const [connected, setConnected] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
   const flashTimer = useRef<number | null>(null);
+  const seenIdsRef = useRef<Set<string>>(new Set(initialOrders.map((o) => o.id)));
 
   useEffect(() => {
     audioOnRef.current = audioOn;
@@ -34,8 +58,7 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     upsertManyHistory(initialOrders);
   }, [initialOrders]);
 
-  // Restore audio preference from localStorage and arm auto-unlock on first
-  // user interaction so the user doesn't need to re-enable after a reload.
+  // Restore audio preference and arm auto-unlock on first interaction.
   useEffect(() => {
     if (typeof window === "undefined") return;
     const stored = localStorage.getItem(AUDIO_KEY);
@@ -55,34 +78,61 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     };
   }, []);
 
+  // Subscribe to Supabase Realtime changes on the orders table.
   useEffect(() => {
-    const es = new EventSource("/api/stream");
+    let supabase;
+    try {
+      supabase = getSupabaseBrowser();
+    } catch (e) {
+      console.error("[StatusClient] Supabase init failed", e);
+      return;
+    }
 
-    es.addEventListener("hello", () => setConnected(true));
-    es.onopen = () => setConnected(true);
-    es.onerror = () => setConnected(false);
-
-    es.addEventListener("new", (ev) => {
-      const order = JSON.parse((ev as MessageEvent).data) as Order;
-      setOrders((prev) => {
-        if (prev.some((o) => o.id === order.id)) return prev;
-        return [order, ...prev];
+    const channel = supabase
+      .channel("orders-stream")
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "orders" },
+        (payload) => {
+          const order = rowToOrder(payload.new as DbRow);
+          setOrders((prev) => {
+            if (prev.some((o) => o.id === order.id)) return prev;
+            return [order, ...prev];
+          });
+          upsertHistory(order);
+          if (!seenIdsRef.current.has(order.id)) {
+            seenIdsRef.current.add(order.id);
+            if (audioOnRef.current) alarm();
+            setFlash(`新規依頼: ${order.room}`);
+            if (flashTimer.current) window.clearTimeout(flashTimer.current);
+            flashTimer.current = window.setTimeout(() => setFlash(null), 5000);
+          }
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "orders" },
+        (payload) => {
+          const order = rowToOrder(payload.new as DbRow);
+          setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
+          upsertHistory(order);
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "DELETE", schema: "public", table: "orders" },
+        (payload) => {
+          const oldRow = payload.old as { id?: string };
+          if (!oldRow.id) return;
+          setOrders((prev) => prev.filter((o) => o.id !== oldRow.id));
+        },
+      )
+      .subscribe((status) => {
+        setConnected(status === "SUBSCRIBED");
       });
-      upsertHistory(order);
-      if (audioOnRef.current) alarm();
-      setFlash(`新規依頼: ${order.room}`);
-      if (flashTimer.current) window.clearTimeout(flashTimer.current);
-      flashTimer.current = window.setTimeout(() => setFlash(null), 5000);
-    });
-
-    es.addEventListener("update", (ev) => {
-      const order = JSON.parse((ev as MessageEvent).data) as Order;
-      setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
-      upsertHistory(order);
-    });
 
     return () => {
-      es.close();
+      supabase.removeChannel(channel);
       if (flashTimer.current) window.clearTimeout(flashTimer.current);
     };
   }, []);
@@ -128,7 +178,7 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
           aria-live="polite"
         >
           {connected ? <Wifi size={12} /> : <WifiOff size={12} />}
-          {connected ? "接続中" : "再接続中..."}
+          {connected ? "接続中" : "接続待ち..."}
         </span>
         {flash && (
           <span className="ml-auto rounded bg-yellow-200 px-3 py-1 text-sm font-medium text-yellow-900">

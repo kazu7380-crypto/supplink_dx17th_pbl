@@ -11,11 +11,16 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
-  const order = orderStore.get(id);
-  if (!order) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
+  try {
+    const order = await orderStore.get(id);
+    if (!order) {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
+    return NextResponse.json(order);
+  } catch (e) {
+    console.error("[GET /api/orders/:id]", e);
+    return NextResponse.json({ error: "fetch failed" }, { status: 500 });
   }
-  return NextResponse.json(order);
 }
 
 export async function PATCH(
@@ -36,9 +41,14 @@ export async function PATCH(
   ) {
     return NextResponse.json({ error: "invalid status" }, { status: 400 });
   }
-  const order = orderStore.setStatus(id, status as OrderStatus);
-  if (!order) {
-    return NextResponse.json({ error: "not found" }, { status: 404 });
+  try {
+    const order = await orderStore.setStatus(id, status as OrderStatus);
+    if (!order) {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
+    return NextResponse.json(order);
+  } catch (e) {
+    console.error("[PATCH /api/orders/:id]", e);
+    return NextResponse.json({ error: "update failed" }, { status: 500 });
   }
-  return NextResponse.json(order);
 }
