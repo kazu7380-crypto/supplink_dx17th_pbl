@@ -1,5 +1,5 @@
 import { EventEmitter } from "events";
-import type { CartLine, Order } from "./types";
+import type { CartLine, Order, OrderStatus } from "./types";
 
 class OrderStore {
   private orders: Order[] = [];
@@ -24,21 +24,34 @@ class OrderStore {
       room: input.room,
       lines: input.lines,
       createdAt: new Date().toISOString(),
-      status: "pending",
+      status: "requested",
     };
     this.orders.unshift(order);
     this.emitter.emit("new", order);
     return order;
   }
 
-  complete(id: string): Order | undefined {
+  setStatus(id: string, status: OrderStatus): Order | undefined {
     const order = this.orders.find((o) => o.id === id);
-    if (!order || order.status === "completed") return order;
-    order.status = "completed";
-    order.completedAt = new Date().toISOString();
+    if (!order) return undefined;
+    if (order.status === status) return order;
+    if (!isAllowedTransition(order.status, status)) return order;
+
+    order.status = status;
+    const now = new Date().toISOString();
+    if (status === "picking") order.pickedAt = now;
+    if (status === "delivered") order.deliveredAt = now;
     this.emitter.emit("update", order);
     return order;
   }
+}
+
+function isAllowedTransition(from: OrderStatus, to: OrderStatus): boolean {
+  if (from === "requested" && to === "picking") return true;
+  if (from === "picking" && to === "delivered") return true;
+  // 1ステップ飛ばし許可（管理用途）
+  if (from === "requested" && to === "delivered") return true;
+  return false;
 }
 
 const globalForStore = globalThis as unknown as {

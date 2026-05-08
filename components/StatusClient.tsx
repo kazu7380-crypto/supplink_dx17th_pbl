@@ -2,8 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { Bell, BellOff, CheckCircle2, Circle, Wifi, WifiOff } from "lucide-react";
-import type { Item, Order } from "@/lib/types";
+import { Bell, BellOff, CheckCircle2, Circle, Loader2, Wifi, WifiOff } from "lucide-react";
+import type { Item, Order, OrderStatus } from "@/lib/types";
+import { ORDER_STATUS_LABEL } from "@/lib/types";
 import { alarm, unlockAudio } from "@/lib/beep";
 import { upsertHistory, upsertManyHistory } from "@/lib/historyStore";
 import { useItems } from "@/lib/useItems";
@@ -98,34 +99,9 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     }
   };
 
-  const completeOrder = async (id: string) => {
-    setOrders((prev) => {
-      const next = prev.map((o) =>
-        o.id === id
-          ? {
-              ...o,
-              status: "completed" as const,
-              completedAt: new Date().toISOString(),
-            }
-          : o,
-      );
-      const updated = next.find((o) => o.id === id);
-      if (updated) upsertHistory(updated);
-      return next;
-    });
-    try {
-      await fetch(`/api/orders/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "completed" }),
-      });
-    } catch {
-      /* SSE 'update' will reconcile if needed */
-    }
-  };
-
-  const pending = orders.filter((o) => o.status === "pending");
-  const completed = orders.filter((o) => o.status === "completed");
+  const requested = orders.filter((o) => o.status === "requested");
+  const picking = orders.filter((o) => o.status === "picking");
+  const delivered = orders.filter((o) => o.status === "delivered");
 
   return (
     <div>
@@ -162,26 +138,31 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
       </div>
 
       <Section
-        title="未完了"
+        title={`${ORDER_STATUS_LABEL.requested} (${requested.length})`}
         icon={<Circle size={16} aria-hidden />}
-        emptyText="未完了の依頼はありません"
+        emptyText="依頼中のオーダーはありません"
       >
-        {pending.map((o) => (
-          <OrderCard
-            key={o.id}
-            order={o}
-            itemMap={itemMap}
-            onComplete={() => completeOrder(o.id)}
-          />
+        {requested.map((o) => (
+          <OrderCard key={o.id} order={o} itemMap={itemMap} />
         ))}
       </Section>
 
       <Section
-        title="完了済み"
-        icon={<CheckCircle2 size={16} aria-hidden />}
-        emptyText="完了済みの依頼はありません"
+        title={`${ORDER_STATUS_LABEL.picking} (${picking.length})`}
+        icon={<Loader2 size={16} aria-hidden />}
+        emptyText="ピッキング中のオーダーはありません"
       >
-        {completed.map((o) => (
+        {picking.map((o) => (
+          <OrderCard key={o.id} order={o} itemMap={itemMap} />
+        ))}
+      </Section>
+
+      <Section
+        title={`${ORDER_STATUS_LABEL.delivered} (${delivered.length})`}
+        icon={<CheckCircle2 size={16} aria-hidden />}
+        emptyText="配送済のオーダーはありません"
+      >
+        {delivered.map((o) => (
           <OrderCard key={o.id} order={o} itemMap={itemMap} />
         ))}
       </Section>
@@ -221,38 +202,40 @@ function Section({
   );
 }
 
+const STATUS_BADGE: Record<OrderStatus, string> = {
+  requested: "bg-ink text-white",
+  picking: "bg-amber-500 text-white",
+  delivered: "bg-gray-300 text-gray-700",
+};
+
+const CARD_TONE: Record<OrderStatus, string> = {
+  requested: "border-ink-line bg-white hover:border-ink hover:shadow-sm",
+  picking: "border-amber-300 bg-amber-50 hover:border-amber-500 hover:shadow-sm",
+  delivered: "border-ink-line bg-gray-100 text-ink-muted hover:bg-gray-200",
+};
+
 function OrderCard({
   order,
   itemMap,
-  onComplete,
 }: {
   order: Order;
   itemMap: Map<number, Item>;
-  onComplete?: () => void;
 }) {
-  const isDone = order.status === "completed";
   const totalQty = order.lines.reduce((s, l) => s + l.quantity, 0);
   return (
     <Link
       href={`/status/${order.id}`}
-      className={[
-        "block rounded-lg border p-3 transition",
-        isDone
-          ? "border-ink-line bg-gray-100 text-ink-muted hover:bg-gray-200"
-          : "border-ink-line bg-white hover:border-ink hover:shadow-sm",
-      ].join(" ")}
+      className={["block rounded-lg border p-3 transition", CARD_TONE[order.status]].join(" ")}
     >
       <div className="flex items-center justify-between">
         <div className="text-base font-semibold">{order.room}</div>
         <span
           className={[
             "rounded px-2 py-0.5 text-xs font-medium",
-            isDone
-              ? "bg-gray-300 text-gray-700"
-              : "bg-ink text-white",
+            STATUS_BADGE[order.status],
           ].join(" ")}
         >
-          {isDone ? "完了" : "未完了"}
+          {ORDER_STATUS_LABEL[order.status]}
         </span>
       </div>
       <div className="mt-1 text-xs text-ink-muted">
@@ -274,22 +257,6 @@ function OrderCard({
           </li>
         )}
       </ul>
-      {!isDone && onComplete && (
-        <div className="mt-3 flex justify-end">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              onComplete();
-            }}
-            className="inline-flex items-center gap-1 rounded border border-ink bg-white px-3 py-1.5 text-sm font-medium text-ink hover:bg-ink hover:text-white"
-          >
-            <CheckCircle2 size={14} aria-hidden />
-            完了にする
-          </button>
-        </div>
-      )}
     </Link>
   );
 }

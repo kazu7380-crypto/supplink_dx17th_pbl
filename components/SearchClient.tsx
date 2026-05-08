@@ -15,6 +15,7 @@ type Props = { items: Item[] };
 export function SearchClient({ items: defaultItems }: Props) {
   const items = useItems(defaultItems);
   const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<string>("");
   const [picked, setPicked] = useState<Item | null>(null);
   const [zoom, setZoom] = useState<Item | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
@@ -26,38 +27,65 @@ export function SearchClient({ items: defaultItems }: Props) {
     return m;
   }, [lines]);
 
+  const categories = useMemo(() => {
+    const set = new Set<string>();
+    for (const it of items) {
+      const c = it.category?.trim();
+      if (c) set.add(c);
+    }
+    return Array.from(set).sort();
+  }, [items]);
+
   const filtered = useMemo(() => {
-    if (!query.trim()) return items;
-    return items.filter((i) =>
-      matches(query, i.name, i.spec, i.shelf, i.memo, String(i.code)),
-    );
-  }, [items, query]);
+    return items.filter((i) => {
+      if (category && (i.category ?? "") !== category) return false;
+      if (!query.trim()) return true;
+      return matches(query, i.name, i.spec, i.shelf, i.memo, String(i.code));
+    });
+  }, [items, query, category]);
 
   return (
     <div>
-      <div className="relative">
-        <Search
-          size={18}
-          aria-hidden
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
-        />
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="材料名・通称・棚番号で検索(例: シリンジ / うさぎ / 棚M5)"
-          className="w-full rounded-lg border border-ink-line bg-white py-3 pl-10 pr-10 text-base focus:border-ink focus:outline-none"
-          autoFocus
-        />
-        {query && (
-          <button
-            type="button"
-            aria-label="検索文字をクリア"
-            onClick={() => setQuery("")}
-            className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-ink-muted hover:bg-gray-100"
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <div className="relative flex-1">
+          <Search
+            size={18}
+            aria-hidden
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-muted"
+          />
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="材料名・通称・棚番号で検索(例: シリンジ / うさぎ / 棚M5)"
+            className="w-full rounded-lg border border-ink-line bg-white py-3 pl-10 pr-10 text-base focus:border-ink focus:outline-none"
+            autoFocus
+          />
+          {query && (
+            <button
+              type="button"
+              aria-label="検索文字をクリア"
+              onClick={() => setQuery("")}
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-ink-muted hover:bg-gray-100"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+        {categories.length > 0 && (
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            aria-label="カテゴリで絞り込む"
+            className="rounded-lg border border-ink-line bg-white px-3 py-3 text-base focus:border-ink focus:outline-none sm:w-44"
           >
-            <X size={16} />
-          </button>
+            <option value="">全カテゴリ</option>
+            {categories.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+          </select>
         )}
       </div>
 

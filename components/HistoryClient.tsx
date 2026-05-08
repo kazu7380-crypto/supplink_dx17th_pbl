@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import type { Item, Order, OrderStatus } from "@/lib/types";
+import { ORDER_STATUS_LABEL } from "@/lib/types";
 import { clearHistory, loadHistory } from "@/lib/historyStore";
 import { useItems } from "@/lib/useItems";
 
@@ -81,8 +82,9 @@ export function HistoryClient({ items: defaultItems }: Props) {
             className="ml-2 rounded border border-ink-line bg-white px-2 py-1 text-sm"
           >
             <option value="all">すべて</option>
-            <option value="pending">未完了</option>
-            <option value="completed">完了</option>
+            <option value="requested">{ORDER_STATUS_LABEL.requested}</option>
+            <option value="picking">{ORDER_STATUS_LABEL.picking}</option>
+            <option value="delivered">{ORDER_STATUS_LABEL.delivered}</option>
           </select>
         </label>
         <label className="text-sm text-ink-soft">
@@ -123,7 +125,8 @@ export function HistoryClient({ items: defaultItems }: Props) {
                 <th className="px-3 py-2 whitespace-nowrap">受付日時</th>
                 <th className="px-3 py-2">手術室</th>
                 <th className="px-3 py-2">状態</th>
-                <th className="px-3 py-2 whitespace-nowrap">完了日時</th>
+                <th className="px-3 py-2 whitespace-nowrap">ピッキング開始</th>
+                <th className="px-3 py-2 whitespace-nowrap">配送完了</th>
                 <th className="px-3 py-2">内容</th>
                 <th className="px-3 py-2 text-right whitespace-nowrap">合計数量</th>
               </tr>
@@ -131,7 +134,6 @@ export function HistoryClient({ items: defaultItems }: Props) {
             <tbody>
               {filtered.map((o) => {
                 const totalQty = o.lines.reduce((s, l) => s + l.quantity, 0);
-                const isDone = o.status === "completed";
                 return (
                   <tr key={o.id} className="border-t border-ink-line align-top">
                     <td className="px-3 py-2 whitespace-nowrap">
@@ -142,14 +144,17 @@ export function HistoryClient({ items: defaultItems }: Props) {
                       <span
                         className={[
                           "rounded px-2 py-0.5 text-xs font-medium",
-                          isDone ? "bg-gray-300 text-gray-700" : "bg-ink text-white",
+                          STATUS_BADGE[o.status],
                         ].join(" ")}
                       >
-                        {isDone ? "完了" : "未完了"}
+                        {ORDER_STATUS_LABEL[o.status]}
                       </span>
                     </td>
                     <td className="px-3 py-2 whitespace-nowrap text-ink-muted">
-                      {o.completedAt ? formatDateTime(o.completedAt) : "-"}
+                      {o.pickedAt ? formatDateTime(o.pickedAt) : "-"}
+                    </td>
+                    <td className="px-3 py-2 whitespace-nowrap text-ink-muted">
+                      {o.deliveredAt ? formatDateTime(o.deliveredAt) : "-"}
                     </td>
                     <td className="px-3 py-2">
                       <ul className="space-y-0.5">
@@ -175,6 +180,12 @@ export function HistoryClient({ items: defaultItems }: Props) {
     </div>
   );
 }
+
+const STATUS_BADGE: Record<OrderStatus, string> = {
+  requested: "bg-ink text-white",
+  picking: "bg-amber-500 text-white",
+  delivered: "bg-gray-300 text-gray-700",
+};
 
 function Empty({ text }: { text: string }) {
   return (

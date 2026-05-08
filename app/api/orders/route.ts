@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { orderStore } from "@/lib/db";
-import { findItem } from "@/lib/items";
 import { ROOMS } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -40,10 +39,12 @@ export async function POST(request: Request) {
     };
     if (
       typeof itemCode !== "number" ||
-      !findItem(itemCode) ||
+      !Number.isInteger(itemCode) ||
+      itemCode <= 0 ||
       typeof quantity !== "number" ||
       !Number.isInteger(quantity) ||
-      quantity <= 0
+      quantity <= 0 ||
+      quantity > 9999
     ) {
       return NextResponse.json({ error: "invalid line" }, { status: 400 });
     }
