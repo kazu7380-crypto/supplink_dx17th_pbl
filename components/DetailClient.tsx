@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, CheckCircle2, PlayCircle } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, PlayCircle, Trash2 } from "lucide-react";
 import type { Item, Order, OrderStatus } from "@/lib/types";
 import { ORDER_STATUS_LABEL, nextOrderStatus } from "@/lib/types";
 import { useItems } from "@/lib/useItems";
-import { upsertHistory } from "@/lib/historyStore";
+import { removeFromHistory, upsertHistory } from "@/lib/historyStore";
 import { clearChecks, loadChecks, saveChecks } from "@/lib/pickingChecksStore";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
 
@@ -48,6 +48,37 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
       saveChecks(order.id, Array.from(next));
       return next;
     });
+  };
+
+  const canDelete = order.status === "requested" || order.status === "picking";
+
+  const handleDelete = async () => {
+    if (!canDelete) return;
+    if (typeof window === "undefined") return;
+    const label = ORDER_STATUS_LABEL[order.status];
+    const ok = window.confirm(
+      `${order.room} の依頼（${label}）を削除します。\nこの操作は取り消せません。よろしいですか？`,
+    );
+    if (!ok) return;
+    setBusy(true);
+    try {
+      const res = await fetch(`/api/orders/${order.id}`, { method: "DELETE" });
+      if (res.ok) {
+        clearChecks(order.id);
+        removeFromHistory(order.id);
+        router.push("/status");
+        router.refresh();
+        return;
+      }
+      const body = await res.json().catch(() => ({}));
+      window.alert(
+        typeof body?.error === "string"
+          ? `削除に失敗しました: ${body.error}`
+          : "削除に失敗しました",
+      );
+    } finally {
+      setBusy(false);
+    }
   };
 
   const advance = async () => {
@@ -209,12 +240,28 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
         </table>
       </div>
 
-      <AdvanceButton
-        status={order.status}
-        busy={busy}
-        canAdvance={order.status !== "picking" || allChecked}
-        onClick={advance}
-      />
+      {(canDelete || order.status !== "delivered") && (
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            {canDelete && (
+              <button
+                type="button"
+                onClick={handleDelete}
+                disabled={busy}
+                className="inline-flex items-center gap-1 rounded border border-red-300 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <Trash2 size={14} aria-hidden /> 依頼を削除
+              </button>
+            )}
+          </div>
+          <AdvanceButton
+            status={order.status}
+            busy={busy}
+            canAdvance={order.status !== "picking" || allChecked}
+            onClick={advance}
+          />
+        </div>
+      )}
     </div>
   );
 }
@@ -241,7 +288,7 @@ function AdvanceButton({
       : "bg-amber-600 hover:bg-amber-700";
   const disabled = busy || !canAdvance;
   return (
-    <div className="mt-5 flex items-center justify-end gap-2">
+    <div className="flex items-center gap-2">
       {status === "picking" && !canAdvance && (
         <span className="text-xs text-ink-muted">
           全ての物品をチェックすると配送完了にできます

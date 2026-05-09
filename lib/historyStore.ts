@@ -72,3 +72,9 @@ export function clearHistory(): void {
   if (typeof window === "undefined") return;
   localStorage.removeItem(HISTORY_KEY);
 }
+
+export function removeFromHistory(id: string): void {
+  const prev = loadHistory();
+  const next = prev.filter((o) => o.id !== id);
+  if (next.length !== prev.length) saveHistory(next);
+}

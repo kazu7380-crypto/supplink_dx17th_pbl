@@ -52,3 +52,26 @@ export async function PATCH(
     return NextResponse.json({ error: "update failed" }, { status: 500 });
   }
 }
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const { id } = await params;
+  try {
+    const result = await orderStore.delete(id);
+    if (result === "not-found") {
+      return NextResponse.json({ error: "not found" }, { status: 404 });
+    }
+    if (result === "forbidden") {
+      return NextResponse.json(
+        { error: "配送済の依頼は削除できません" },
+        { status: 409 },
+      );
+    }
+    return NextResponse.json({ ok: true });
+  } catch (e) {
+    console.error("[DELETE /api/orders/:id]", e);
+    return NextResponse.json({ error: "delete failed" }, { status: 500 });
+  }
+}
