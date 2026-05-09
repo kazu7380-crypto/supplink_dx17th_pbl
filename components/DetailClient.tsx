@@ -215,21 +215,24 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                         </div>
                       )}
                     </div>
-                    <div className="flex shrink-0 flex-col items-end gap-2 text-right">
+                    <div className="shrink-0 text-right">
                       <div className="text-lg font-semibold tabular-nums leading-none">
                         × {line.quantity}
-                      </div>
-                      <div
-                        className={[
-                          "text-3xl font-bold leading-none",
-                          dim ? "text-ink-muted" : "text-ink",
-                        ].join(" ")}
-                      >
-                        {it.shelf || "棚?"}
                       </div>
                     </div>
                   </div>
                 </div>
+              </div>
+
+              <div className="mt-2 flex justify-end">
+                <span
+                  className={[
+                    "text-3xl font-bold leading-none",
+                    dim ? "text-ink-muted" : "text-ink",
+                  ].join(" ")}
+                >
+                  {it.shelf || "棚?"}
+                </span>
               </div>
 
               {showCheckbox && (
