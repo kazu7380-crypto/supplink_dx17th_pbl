@@ -140,14 +140,14 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     [orders],
   );
 
-  // 依頼中が残っている間 15 秒ごとにアラームを再鳴動させる。
+  // 依頼中が残っている間 5 秒ごとにアラームを再鳴動させる。
   // ピッキング中／配送済へ進めば自動で停止。
   useEffect(() => {
     if (!audioOn) return;
     if (pendingRequestedCount === 0) return;
     const interval = window.setInterval(() => {
       alarm();
-    }, 15_000);
+    }, 5_000);
     return () => window.clearInterval(interval);
   }, [audioOn, pendingRequestedCount]);
 

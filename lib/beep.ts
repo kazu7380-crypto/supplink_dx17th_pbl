@@ -68,12 +68,17 @@ function tone(freq: number, duration: number, delay = 0): void {
 }
 
 /**
- * Attention-grabbing alarm pattern.
- * 4 alternating tones (~1.6s total). Suitable for repeated playback.
+ * Attention-grabbing alarm.
+ * 4 alternating tones × 2 rounds (~2.9s total).
+ * Round 1: 0.0s〜1.3s, short pause, Round 2: 1.6s〜2.9s.
  */
 export function alarm(): void {
-  tone(880, 0.22, 0);
-  tone(1320, 0.22, 0.28);
-  tone(880, 0.22, 0.56);
-  tone(1320, 0.45, 0.84);
+  const playRound = (offset: number) => {
+    tone(880, 0.22, offset + 0.0);
+    tone(1320, 0.22, offset + 0.28);
+    tone(880, 0.22, offset + 0.56);
+    tone(1320, 0.45, offset + 0.84);
+  };
+  playRound(0);
+  playRound(1.6);
 }
