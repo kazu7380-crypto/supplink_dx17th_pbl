@@ -147,7 +147,14 @@ export function SearchClient({ items: defaultItems }: Props) {
                       <ItemPhotoThumb code={item.code} size={48} />
                     </button>
                     <div className="min-w-0">
-                      <div className="text-base font-semibold">{item.name}</div>
+                      {item.category && (
+                        <div className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
+                          {item.category}
+                        </div>
+                      )}
+                      <div className="text-base font-semibold leading-tight">
+                        {item.name}
+                      </div>
                       <div className="truncate text-sm text-ink-soft">
                         {item.spec}
                       </div>
@@ -164,10 +171,7 @@ export function SearchClient({ items: defaultItems }: Props) {
                     </span>
                   )}
                 </div>
-                <div className="mt-2 text-xs text-ink-muted">
-                  {item.category || " "}
-                </div>
-                <div className="mt-1 flex items-end justify-between gap-2 text-xs">
+                <div className="mt-2 flex items-end justify-between gap-2 text-xs">
                   <span className="min-w-0 truncate text-ink-muted">
                     {item.memo ? `メモ: ${item.memo}` : ""}
                   </span>
