@@ -1,7 +1,10 @@
-import { items } from "@/lib/items";
+import { listItemsOrFallback } from "@/lib/itemsDb";
 import { SettingsClient } from "@/components/SettingsClient";
 
-export default function SettingsPage() {
+export const dynamic = "force-dynamic";
+
+export default async function SettingsPage() {
+  const items = await listItemsOrFallback();
   return (
     <div>
       <div className="mb-4">

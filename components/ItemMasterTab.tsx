@@ -1,11 +1,10 @@
 "use client";
 
-import { Fragment, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AlertCircle, ChevronDown, ChevronRight, Image as ImageIcon, RotateCcw, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { Item } from "@/lib/types";
 import { useItems } from "@/lib/useItems";
-import { clearItemsOverride, saveItemsOverride } from "@/lib/itemsStore";
 import { ItemPhotoEditor } from "./ItemPhotoEditor";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
 import { PhotoBatchImport } from "./PhotoBatchImport";
@@ -17,7 +16,8 @@ type Preview = {
   warnings: string[];
 };
 
-const FIELD_ALIASES: Record<keyof Item, string[]> = {
+type CsvField = "code" | "name" | "spec" | "shelf" | "memo" | "category";
+const FIELD_ALIASES: Record<CsvField, string[]> = {
   code: ["物品コード", "コード", "code"],
   name: ["材料名", "品名", "名前", "name"],
   spec: ["製品番号", "製品記号", "規格", "spec"],
@@ -33,6 +33,9 @@ export function ItemMasterTab({ defaultItems }: Props) {
   const [expandedCode, setExpandedCode] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [filter, setFilter] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [savedFlash, setSavedFlash] = useState<string | null>(null);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -81,26 +84,69 @@ export function ItemMasterTab({ defaultItems }: Props) {
     if (fileRef.current) fileRef.current.value = "";
   };
 
-  const applyPreview = () => {
+  const applyPreview = async () => {
     if (!preview) return;
-    saveItemsOverride(preview.rows);
-    setPreview(null);
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: preview.rows }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          typeof body?.error === "string" ? body.error : "save failed",
+        );
+      }
+      setSavedFlash(`物品マスタを更新しました（${preview.rows.length} 件）`);
+      window.setTimeout(() => setSavedFlash(null), 4000);
+      setPreview(null);
+    } catch (e) {
+      console.error(e);
+      setSaveError(e instanceof Error ? e.message : "保存に失敗しました");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const cancelPreview = () => {
     setPreview(null);
     setParseError(null);
+    setSaveError(null);
   };
 
-  const resetToDefault = () => {
+  const resetToDefault = async () => {
     if (typeof window === "undefined") return;
-    if (!window.confirm("インポートした物品マスタをリセットして初期データに戻しますか？")) return;
-    clearItemsOverride();
+    if (
+      !window.confirm(
+        "物品マスタをすべて削除します（共有マスタが空になります）。\nこの操作は取り消せません。よろしいですか？",
+      )
+    )
+      return;
+    setSaving(true);
+    setSaveError(null);
+    try {
+      const res = await fetch("/api/items", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ items: [] }),
+      });
+      if (!res.ok) throw new Error("reset failed");
+      setSavedFlash("物品マスタを削除しました");
+      window.setTimeout(() => setSavedFlash(null), 4000);
+    } catch (e) {
+      console.error(e);
+      setSaveError("リセットに失敗しました");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <div>
-      <Section title="インポート" description="CSV / TSV / Excel を読み込んで物品マスタを更新します。列の見出しは「物品コード / 材料名 / 製品番号 / 棚番 / メモ / カテゴリ」を想定しています。">
+      <Section title="インポート" description="CSV / TSV / Excel を読み込んで物品マスタを更新します。データはサーバ（Supabase）に保存され、全端末で共有されます。列の見出しは「物品コード / 材料名 / 製品番号 / 棚番 / メモ / カテゴリ」を想定しています。">
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
             <Upload size={16} aria-hidden /> ファイルを選択
@@ -115,15 +161,26 @@ export function ItemMasterTab({ defaultItems }: Props) {
           <button
             type="button"
             onClick={resetToDefault}
-            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50"
+            disabled={saving}
+            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
           >
-            <RotateCcw size={14} aria-hidden /> 初期データに戻す
+            <RotateCcw size={14} aria-hidden /> マスタを空にする
           </button>
+          {savedFlash && (
+            <span className="ml-2 inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800">
+              {savedFlash}
+            </span>
+          )}
         </div>
 
         {parseError && (
           <div className="mt-3 inline-flex items-center gap-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
             <AlertCircle size={14} aria-hidden /> {parseError}
+          </div>
+        )}
+        {saveError && (
+          <div className="mt-3 inline-flex items-center gap-2 rounded border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800">
+            <AlertCircle size={14} aria-hidden /> {saveError}
           </div>
         )}
 
@@ -175,16 +232,18 @@ export function ItemMasterTab({ defaultItems }: Props) {
               <button
                 type="button"
                 onClick={cancelPreview}
-                className="rounded border border-ink-line bg-white px-3 py-1.5 text-sm text-ink-soft hover:bg-gray-50"
+                disabled={saving}
+                className="rounded border border-ink-line bg-white px-3 py-1.5 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
               >
                 キャンセル
               </button>
               <button
                 type="button"
                 onClick={applyPreview}
-                className="rounded bg-ink px-4 py-1.5 text-sm font-medium text-white hover:opacity-90"
+                disabled={saving}
+                className="rounded bg-ink px-4 py-1.5 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:bg-gray-300"
               >
-                この内容で更新
+                {saving ? "保存中..." : "この内容で更新"}
               </button>
             </div>
           </div>
@@ -199,19 +258,19 @@ export function ItemMasterTab({ defaultItems }: Props) {
       </Section>
 
       <Section title={`物品一覧 (${items.length} 件)`} description="行をタップすると写真を登録できます。">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <input
             type="text"
             placeholder="名前・棚・コード等で検索"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="w-64 max-w-full rounded border border-ink-line bg-white px-3 py-1.5 text-sm"
+            className="w-full rounded border border-ink-line bg-white px-3 py-2 text-sm sm:w-64"
           />
           {categories.length > 0 && (
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="rounded border border-ink-line bg-white px-2 py-1.5 text-sm"
+              className="rounded border border-ink-line bg-white px-2 py-2 text-sm sm:py-1.5"
             >
               <option value="">すべてのカテゴリ</option>
               {categories.map((c) => (
@@ -225,70 +284,71 @@ export function ItemMasterTab({ defaultItems }: Props) {
             {filtered.length} 件表示
           </span>
         </div>
-        <div className="overflow-hidden rounded-lg border border-ink-line bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-ink-muted">
-              <tr>
-                <th className="w-10 px-2 py-2"></th>
-                <th className="w-16 px-2 py-2">写真</th>
-                <th className="w-20 px-2 py-2">コード</th>
-                <th className="px-2 py-2">名前 / 仕様</th>
-                <th className="px-2 py-2">棚</th>
-                <th className="px-2 py-2">メモ</th>
-                <th className="px-2 py-2">カテゴリ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((it) => {
-                const open = expandedCode === it.code;
-                return (
-                  <Fragment key={it.code}>
-                    <tr
-                      className="cursor-pointer border-t border-ink-line align-top hover:bg-gray-50"
-                      onClick={() => setExpandedCode(open ? null : it.code)}
-                    >
-                      <td className="px-2 py-2 text-ink-muted">
-                        {open ? (
-                          <ChevronDown size={14} aria-hidden />
-                        ) : (
-                          <ChevronRight size={14} aria-hidden />
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
-                        <ItemPhotoThumb code={it.code} size={40} />
-                      </td>
-                      <td className="px-2 py-2 tabular-nums">{it.code}</td>
-                      <td className="px-2 py-2">
-                        <div className="font-medium">{it.name}</div>
-                        <div className="text-xs text-ink-soft">{it.spec}</div>
-                      </td>
-                      <td className="px-2 py-2 text-ink-soft">{it.shelf}</td>
-                      <td className="px-2 py-2 text-ink-muted">{it.memo}</td>
-                      <td className="px-2 py-2 text-ink-soft">{it.category ?? ""}</td>
-                    </tr>
-                    {open && (
-                      <tr>
-                        <td colSpan={7} className="bg-gray-50 px-4 py-3">
-                          <div className="flex items-center gap-2 text-xs text-ink-soft">
-                            <ImageIcon size={14} aria-hidden /> 写真の登録 / 変更
-                          </div>
-                          <div className="mt-2">
-                            <ItemPhotoEditor code={it.code} />
-                          </div>
-                        </td>
-                      </tr>
+
+        <ul className="space-y-2">
+          {filtered.map((it) => {
+            const open = expandedCode === it.code;
+            return (
+              <li
+                key={it.code}
+                className="overflow-hidden rounded-lg border border-ink-line bg-white"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpandedCode(open ? null : it.code)}
+                  aria-expanded={open}
+                  className="flex w-full items-start gap-3 p-3 text-left hover:bg-gray-50"
+                >
+                  <div className="shrink-0">
+                    <ItemPhotoThumb item={it} size={56} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {it.category && (
+                      <div className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
+                        {it.category}
+                      </div>
                     )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <div className="p-6 text-center text-sm text-ink-muted">
-              該当する物品はありません
-            </div>
-          )}
-        </div>
+                    <div className="text-sm font-semibold leading-tight">
+                      {it.name}
+                    </div>
+                    <div className="truncate text-xs text-ink-soft">
+                      {it.spec}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                      <span className="font-bold text-ink">{it.shelf}</span>
+                      <span className="text-ink-muted">#{it.code}</span>
+                      {it.memo && (
+                        <span className="text-ink-muted">メモ: {it.memo}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="shrink-0 self-center text-ink-muted">
+                    {open ? (
+                      <ChevronDown size={16} aria-hidden />
+                    ) : (
+                      <ChevronRight size={16} aria-hidden />
+                    )}
+                  </div>
+                </button>
+                {open && (
+                  <div className="border-t border-ink-line bg-gray-50 p-3">
+                    <div className="flex items-center gap-2 text-xs text-ink-soft">
+                      <ImageIcon size={14} aria-hidden /> 写真の登録 / 変更
+                    </div>
+                    <div className="mt-2">
+                      <ItemPhotoEditor item={it} />
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        {filtered.length === 0 && (
+          <div className="rounded-lg border border-dashed border-ink-line bg-white p-6 text-center text-sm text-ink-muted">
+            該当する物品はありません
+          </div>
+        )}
       </Section>
     </div>
   );

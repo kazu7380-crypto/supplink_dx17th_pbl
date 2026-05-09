@@ -144,10 +144,17 @@ export function SearchClient({ items: defaultItems }: Props) {
                       title="写真を拡大"
                       className="cursor-zoom-in rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                     >
-                      <ItemPhotoThumb code={item.code} size={48} />
+                      <ItemPhotoThumb item={item} size={64} />
                     </button>
                     <div className="min-w-0">
-                      <div className="text-base font-semibold">{item.name}</div>
+                      {item.category && (
+                        <div className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
+                          {item.category}
+                        </div>
+                      )}
+                      <div className="text-base font-semibold leading-tight">
+                        {item.name}
+                      </div>
                       <div className="truncate text-sm text-ink-soft">
                         {item.spec}
                       </div>
@@ -164,16 +171,16 @@ export function SearchClient({ items: defaultItems }: Props) {
                     </span>
                   )}
                 </div>
-                <div className="mt-2 flex items-center gap-2 text-xs text-ink-muted">
-                  <span>#{item.code}</span>
-                  <span aria-hidden>·</span>
-                  <span>{item.shelf}</span>
+                <div className="mt-2 flex items-end justify-between gap-2 text-xs">
+                  <span className="min-w-0 truncate text-ink-muted">
+                    {item.memo ? `メモ: ${item.memo}` : ""}
+                  </span>
+                  {item.shelf && (
+                    <span className="shrink-0 font-bold text-ink">
+                      {item.shelf}
+                    </span>
+                  )}
                 </div>
-                {item.memo && (
-                  <div className="mt-1 text-xs text-ink-muted">
-                    メモ: {item.memo}
-                  </div>
-                )}
               </div>
             </li>
           );

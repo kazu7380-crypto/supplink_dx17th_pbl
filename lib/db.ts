@@ -1,50 +1,126 @@
-import { EventEmitter } from "events";
-import type { CartLine, Order, OrderStatus } from "./types";
+import { getSupabaseServer } from "./supabaseServer";
+import type { Order, OrderLine, OrderStatus } from "./types";
 
-class OrderStore {
-  private orders: Order[] = [];
-  readonly emitter = new EventEmitter();
+/**
+ * Server-side order store backed by Supabase Postgres.
+ *
+ * NOTE: All methods are async (Supabase calls are network operations).
+ * Realtime updates flow over Supabase Realtime; this module no longer
+ * exposes an EventEmitter.
+ */
 
-  list(): Order[] {
-    return [...this.orders].sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt),
-    );
-  }
+type DbRow = {
+  id: string;
+  room: string;
+  lines: OrderLine[];
+  status: OrderStatus;
+  created_at: string;
+  picked_at: string | null;
+  delivered_at: string | null;
+};
 
-  get(id: string): Order | undefined {
-    return this.orders.find((o) => o.id === id);
-  }
-
-  create(input: { room: string; lines: CartLine[] }): Order {
-    const order: Order = {
-      id:
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
-      room: input.room,
-      lines: input.lines,
-      createdAt: new Date().toISOString(),
-      status: "requested",
-    };
-    this.orders.unshift(order);
-    this.emitter.emit("new", order);
-    return order;
-  }
-
-  setStatus(id: string, status: OrderStatus): Order | undefined {
-    const order = this.orders.find((o) => o.id === id);
-    if (!order) return undefined;
-    if (order.status === status) return order;
-    if (!isAllowedTransition(order.status, status)) return order;
-
-    order.status = status;
-    const now = new Date().toISOString();
-    if (status === "picking") order.pickedAt = now;
-    if (status === "delivered") order.deliveredAt = now;
-    this.emitter.emit("update", order);
-    return order;
-  }
+function rowToOrder(row: DbRow): Order {
+  return {
+    id: row.id,
+    room: row.room,
+    lines: row.lines,
+    status: row.status,
+    createdAt: row.created_at,
+    pickedAt: row.picked_at ?? undefined,
+    deliveredAt: row.delivered_at ?? undefined,
+  };
 }
+
+export const orderStore = {
+  async list(): Promise<Order[]> {
+    const sb = getSupabaseServer();
+    const { data, error } = await sb
+      .from("orders")
+      .select("id, room, lines, status, created_at, picked_at, delivered_at")
+      .order("created_at", { ascending: false });
+    if (error) {
+      console.error("[orderStore.list]", error);
+      throw error;
+    }
+    return (data ?? []).map((r) => rowToOrder(r as DbRow));
+  },
+
+  async get(id: string): Promise<Order | null> {
+    const sb = getSupabaseServer();
+    const { data, error } = await sb
+      .from("orders")
+      .select("id, room, lines, status, created_at, picked_at, delivered_at")
+      .eq("id", id)
+      .maybeSingle();
+    if (error) {
+      console.error("[orderStore.get]", error);
+      throw error;
+    }
+    return data ? rowToOrder(data as DbRow) : null;
+  },
+
+  async create(input: { room: string; lines: OrderLine[] }): Promise<Order> {
+    const sb = getSupabaseServer();
+    const { data, error } = await sb
+      .from("orders")
+      .insert({
+        room: input.room,
+        lines: input.lines,
+        status: "requested",
+      })
+      .select("id, room, lines, status, created_at, picked_at, delivered_at")
+      .single();
+    if (error) {
+      console.error("[orderStore.create]", error);
+      throw error;
+    }
+    return rowToOrder(data as DbRow);
+  },
+
+  /**
+   * Hard-delete an order. Returns:
+   *   - "deleted" : success
+   *   - "not-found" : id doesn't exist
+   */
+  async delete(id: string): Promise<"deleted" | "not-found"> {
+    const sb = getSupabaseServer();
+    const current = await this.get(id);
+    if (!current) return "not-found";
+    const { error } = await sb.from("orders").delete().eq("id", id);
+    if (error) {
+      console.error("[orderStore.delete]", error);
+      throw error;
+    }
+    return "deleted";
+  },
+
+  async setStatus(id: string, status: OrderStatus): Promise<Order | null> {
+    const sb = getSupabaseServer();
+
+    // Read current status for transition validation.
+    const current = await this.get(id);
+    if (!current) return null;
+    if (current.status === status) return current;
+    if (!isAllowedTransition(current.status, status)) return current;
+
+    const now = new Date().toISOString();
+    const patch: Record<string, unknown> = { status };
+    if (status === "picking") patch.picked_at = now;
+    if (status === "delivered") patch.delivered_at = now;
+
+    const { data, error } = await sb
+      .from("orders")
+      .update(patch)
+      .eq("id", id)
+      .select("id, room, lines, status, created_at, picked_at, delivered_at")
+      .single();
+    if (error) {
+      console.error("[orderStore.setStatus]", error);
+      throw error;
+    }
+    return rowToOrder(data as DbRow);
+  },
+};
 
 function isAllowedTransition(from: OrderStatus, to: OrderStatus): boolean {
   if (from === "requested" && to === "picking") return true;
@@ -53,10 +129,3 @@ function isAllowedTransition(from: OrderStatus, to: OrderStatus): boolean {
   if (from === "requested" && to === "delivered") return true;
   return false;
 }
-
-const globalForStore = globalThis as unknown as {
-  __orderStore?: OrderStore;
-};
-
-export const orderStore: OrderStore =
-  globalForStore.__orderStore ?? (globalForStore.__orderStore = new OrderStore());

@@ -3,7 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import { CheckCircle2, FileImage, ImageOff, AlertCircle, Upload } from "lucide-react";
 import type { Item } from "@/lib/types";
-import { resizeImage, savePhoto } from "@/lib/photoStore";
+import { compressImage, savePhoto } from "@/lib/photoStore";
 
 type Props = { items: Item[] };
 
@@ -70,7 +70,7 @@ export function PhotoBatchImport({ items }: Props) {
       }
 
       try {
-        const blob = await resizeImage(file, 1024, 0.85);
+        const blob = await compressImage(file, 80_000);
         await savePhoto(row.code, blob);
         update({ status: "success" });
       } catch (err) {

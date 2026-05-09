@@ -65,7 +65,7 @@ export function QuantityDialog({
       <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-lg">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
-            <ItemPhotoThumb code={item.code} size={64} />
+            <ItemPhotoThumb item={item} size={64} />
             <div className="min-w-0">
               <div className="text-base font-semibold">{item.name}</div>
               <div className="text-sm text-ink-soft">{item.spec}</div>
