@@ -5,21 +5,29 @@ import { useItemPhotoUrl } from "@/lib/useItemPhoto";
 
 type Props = {
   code: number;
+  /**
+   * Fixed pixel size. Pass `undefined` to let CSS / className control
+   * the dimensions (e.g. `aspect-square h-full` to match a flex sibling).
+   */
   size?: number;
   className?: string;
   alt?: string;
 };
 
-export function ItemPhotoThumb({ code, size = 48, className, alt }: Props) {
+export function ItemPhotoThumb({ code, size, className, alt }: Props) {
   const url = useItemPhotoUrl(code);
-  const dim = `${size}px`;
+  const useFixedSize = size != null;
+  const inlineStyle = useFixedSize
+    ? { width: `${size}px`, height: `${size}px` }
+    : undefined;
+  const iconPx = useFixedSize ? Math.max(12, Math.floor(size / 3)) : 16;
   return (
     <div
       className={[
         "flex shrink-0 items-center justify-center overflow-hidden rounded border border-ink-line bg-gray-50 text-ink-muted",
         className ?? "",
       ].join(" ")}
-      style={{ width: dim, height: dim }}
+      style={inlineStyle}
     >
       {url ? (
         // eslint-disable-next-line @next/next/no-img-element
@@ -29,7 +37,7 @@ export function ItemPhotoThumb({ code, size = 48, className, alt }: Props) {
           className="h-full w-full object-cover"
         />
       ) : (
-        <ImageOff size={Math.max(12, Math.floor(size / 3))} aria-hidden />
+        <ImageOff size={iconPx} aria-hidden />
       )}
     </div>
   );
