@@ -59,36 +59,68 @@ export function subscribePhotoChanged(
 }
 
 /**
- * Resize an image File/Blob to fit within the given max dimension while
- * preserving aspect ratio. Returns a JPEG Blob to keep storage compact.
+ * Compress an image File/Blob to fit under `targetBytes` (default ~80KB).
+ *
+ * Tries a series of (max-dimension, JPEG quality) combinations from
+ * highest to lowest and returns the first that meets the target.
+ * If none meet the target, returns the smallest result obtained.
+ *
+ * Aspect ratio is preserved. Output is always JPEG for compactness.
  */
-export async function resizeImage(
+export async function compressImage(
   source: Blob,
-  maxDim = 1024,
-  quality = 0.85,
+  targetBytes = 80_000,
 ): Promise<Blob> {
   const url = URL.createObjectURL(source);
   try {
     const img = await loadImage(url);
-    const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
-    const w = Math.round(img.width * ratio);
-    const h = Math.round(img.height * ratio);
-    const canvas = document.createElement("canvas");
-    canvas.width = w;
-    canvas.height = h;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return source;
-    ctx.drawImage(img, 0, 0, w, h);
-    return await new Promise<Blob>((resolve) => {
-      canvas.toBlob(
-        (b) => resolve(b ?? source),
-        "image/jpeg",
-        quality,
-      );
-    });
+
+    const attempts: Array<{ dim: number; quality: number }> = [
+      { dim: 1024, quality: 0.7 },
+      { dim: 800,  quality: 0.7 },
+      { dim: 800,  quality: 0.6 },
+      { dim: 640,  quality: 0.65 },
+      { dim: 640,  quality: 0.55 },
+      { dim: 512,  quality: 0.6 },
+      { dim: 512,  quality: 0.5 },
+      { dim: 400,  quality: 0.55 },
+      { dim: 400,  quality: 0.45 },
+    ];
+
+    let best: Blob | null = null;
+    for (const { dim, quality } of attempts) {
+      const blob = await renderJpeg(img, dim, quality);
+      if (blob.size <= targetBytes) return blob;
+      if (!best || blob.size < best.size) best = blob;
+    }
+    // 目標未達でも一番小さいものを返す（元画像にフォールバック）
+    return best ?? source;
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+async function renderJpeg(
+  img: HTMLImageElement,
+  maxDim: number,
+  quality: number,
+): Promise<Blob> {
+  const ratio = Math.min(1, maxDim / Math.max(img.width, img.height));
+  const w = Math.max(1, Math.round(img.width * ratio));
+  const h = Math.max(1, Math.round(img.height * ratio));
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("canvas 2d context is unavailable");
+  ctx.drawImage(img, 0, 0, w, h);
+  return await new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (b) => (b ? resolve(b) : reject(new Error("canvas.toBlob returned null"))),
+      "image/jpeg",
+      quality,
+    );
+  });
 }
 
 function loadImage(src: string): Promise<HTMLImageElement> {

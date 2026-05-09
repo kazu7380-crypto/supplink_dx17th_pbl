@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Camera, Trash2, Upload } from "lucide-react";
 import { useItemPhotoUrl } from "@/lib/useItemPhoto";
-import { deletePhoto, resizeImage, savePhoto } from "@/lib/photoStore";
+import { compressImage, deletePhoto, savePhoto } from "@/lib/photoStore";
 
 type Props = { code: number };
 
@@ -25,7 +25,7 @@ export function ItemPhotoEditor({ code }: Props) {
     }
     setBusy(true);
     try {
-      const blob = await resizeImage(file, 1024, 0.85);
+      const blob = await compressImage(file, 80_000);
       await savePhoto(code, blob);
     } catch (err) {
       console.error(err);
@@ -120,7 +120,7 @@ export function ItemPhotoEditor({ code }: Props) {
             <div className="mt-2 text-xs text-red-700">{error}</div>
           )}
           <div className="mt-2 text-xs text-ink-muted">
-            JPG / JPEG / PNG。長辺 1024px に自動縮小して保存します。
+            JPG / JPEG / PNG。約 80KB 以下に自動圧縮して保存します。
           </div>
         </div>
       </div>
