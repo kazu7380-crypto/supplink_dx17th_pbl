@@ -21,6 +21,8 @@ type DbRow = {
   created_at: string;
   picked_at: string | null;
   delivered_at: string | null;
+  department: string | null;
+  procedure_name: string | null;
 };
 
 function rowToOrder(row: DbRow): Order {
@@ -32,6 +34,8 @@ function rowToOrder(row: DbRow): Order {
     createdAt: row.created_at,
     pickedAt: row.picked_at ?? undefined,
     deliveredAt: row.delivered_at ?? undefined,
+    department: row.department ?? undefined,
+    procedure: row.procedure_name ?? undefined,
   };
 }
 

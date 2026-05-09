@@ -17,7 +17,12 @@ type DbRow = {
   created_at: string;
   picked_at: string | null;
   delivered_at: string | null;
+  department: string | null;
+  procedure_name: string | null;
 };
+
+const SELECT_COLS =
+  "id, room, lines, status, created_at, picked_at, delivered_at, department, procedure_name";
 
 function rowToOrder(row: DbRow): Order {
   return {
@@ -28,6 +33,8 @@ function rowToOrder(row: DbRow): Order {
     createdAt: row.created_at,
     pickedAt: row.picked_at ?? undefined,
     deliveredAt: row.delivered_at ?? undefined,
+    department: row.department ?? undefined,
+    procedure: row.procedure_name ?? undefined,
   };
 }
 
@@ -36,7 +43,7 @@ export const orderStore = {
     const sb = getSupabaseServer();
     const { data, error } = await sb
       .from("orders")
-      .select("id, room, lines, status, created_at, picked_at, delivered_at")
+      .select(SELECT_COLS)
       .order("created_at", { ascending: false });
     if (error) {
       console.error("[orderStore.list]", error);
@@ -49,7 +56,7 @@ export const orderStore = {
     const sb = getSupabaseServer();
     const { data, error } = await sb
       .from("orders")
-      .select("id, room, lines, status, created_at, picked_at, delivered_at")
+      .select(SELECT_COLS)
       .eq("id", id)
       .maybeSingle();
     if (error) {
@@ -59,7 +66,12 @@ export const orderStore = {
     return data ? rowToOrder(data as DbRow) : null;
   },
 
-  async create(input: { room: string; lines: OrderLine[] }): Promise<Order> {
+  async create(input: {
+    room: string;
+    lines: OrderLine[];
+    department?: string;
+    procedure?: string;
+  }): Promise<Order> {
     const sb = getSupabaseServer();
     const { data, error } = await sb
       .from("orders")
@@ -67,8 +79,10 @@ export const orderStore = {
         room: input.room,
         lines: input.lines,
         status: "requested",
+        department: input.department ?? null,
+        procedure_name: input.procedure ?? null,
       })
-      .select("id, room, lines, status, created_at, picked_at, delivered_at")
+      .select(SELECT_COLS)
       .single();
     if (error) {
       console.error("[orderStore.create]", error);
@@ -112,7 +126,7 @@ export const orderStore = {
       .from("orders")
       .update(patch)
       .eq("id", id)
-      .select("id, room, lines, status, created_at, picked_at, delivered_at")
+      .select(SELECT_COLS)
       .single();
     if (error) {
       console.error("[orderStore.setStatus]", error);

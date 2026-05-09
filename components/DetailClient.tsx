@@ -148,6 +148,17 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
           </span>
         </div>
         <div className="mt-3 space-y-0.5 text-xs text-ink-muted sm:text-sm">
+          {(order.department || order.procedure) && (
+            <div className="text-ink">
+              {order.department && (
+                <span className="font-medium">{order.department}</span>
+              )}
+              {order.department && order.procedure && (
+                <span className="mx-1">/</span>
+              )}
+              {order.procedure && <span>{order.procedure}</span>}
+            </div>
+          )}
           <div>受付: {formatDateTime(order.createdAt)}</div>
           {order.pickedAt && (
             <div>ピッキング開始: {formatDateTime(order.pickedAt)}</div>

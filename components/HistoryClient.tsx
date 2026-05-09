@@ -19,6 +19,8 @@ type DbRow = {
   created_at: string;
   picked_at: string | null;
   delivered_at: string | null;
+  department: string | null;
+  procedure_name: string | null;
 };
 
 function rowToOrder(row: DbRow): Order {
@@ -30,6 +32,8 @@ function rowToOrder(row: DbRow): Order {
     createdAt: row.created_at,
     pickedAt: row.picked_at ?? undefined,
     deliveredAt: row.delivered_at ?? undefined,
+    department: row.department ?? undefined,
+    procedure: row.procedure_name ?? undefined,
   };
 }
 
@@ -37,7 +41,9 @@ async function fetchAllOrders(): Promise<Order[]> {
   const sb = getSupabaseBrowser();
   const { data, error } = await sb
     .from("orders")
-    .select("id, room, lines, status, created_at, picked_at, delivered_at")
+    .select(
+      "id, room, lines, status, created_at, picked_at, delivered_at, department, procedure_name",
+    )
     .order("created_at", { ascending: false });
   if (error) {
     console.error("[HistoryClient.fetch]", error);
@@ -331,6 +337,17 @@ function HistoryCard({
         </span>
       </div>
       <div className="mt-1 space-y-0.5 text-xs text-ink-muted">
+        {(order.department || order.procedure) && (
+          <div className="text-ink">
+            {order.department && (
+              <span className="font-medium">{order.department}</span>
+            )}
+            {order.department && order.procedure && (
+              <span className="mx-1">/</span>
+            )}
+            {order.procedure && <span>{order.procedure}</span>}
+          </div>
+        )}
         <div>受付: {formatDateTime(order.createdAt)}</div>
         {order.pickedAt && (
           <div>ピッキング開始: {formatDateTime(order.pickedAt)}</div>

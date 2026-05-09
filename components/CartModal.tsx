@@ -13,6 +13,7 @@ import {
 import { useCart, useRoom } from "./providers";
 import { items as defaultItems } from "@/lib/items";
 import { useItems } from "@/lib/useItems";
+import { useProcedures } from "@/lib/useProcedures";
 import { ROOMS, type CartLine, type Item } from "@/lib/types";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
 
@@ -22,12 +23,38 @@ export function CartModal() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
+  const [department, setDepartment] = useState("");
+  const [procedure, setProcedure] = useState("");
 
   const items = useItems(defaultItems);
   const itemMap = useMemo(
     () => new Map(items.map((i) => [i.code, i])),
     [items],
   );
+
+  const procedures = useProcedures();
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    for (const p of procedures) set.add(p.department);
+    return Array.from(set).sort();
+  }, [procedures]);
+  const proceduresInDept = useMemo(() => {
+    if (!department) return [];
+    return procedures
+      .filter((p) => p.department === department)
+      .map((p) => p.name);
+  }, [procedures, department]);
+
+  // 診療科を変えたら術式選択をクリア（古い術式が残らないように）
+  useEffect(() => {
+    if (!department) {
+      setProcedure("");
+      return;
+    }
+    if (procedure && !proceduresInDept.includes(procedure)) {
+      setProcedure("");
+    }
+  }, [department, procedure, proceduresInDept]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -84,13 +111,20 @@ export function CartModal() {
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room, lines: snapshottedLines }),
+        body: JSON.stringify({
+          room,
+          lines: snapshottedLines,
+          department: department || undefined,
+          procedure: procedure || undefined,
+        }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
         throw new Error(body?.error ?? "依頼送信に失敗しました");
       }
       clear();
+      setDepartment("");
+      setProcedure("");
       setDone(true);
     } catch (e) {
       setError(e instanceof Error ? e.message : "依頼送信に失敗しました");
@@ -179,6 +213,46 @@ export function CartModal() {
                 ))}
               </select>
             </label>
+            {departments.length > 0 && (
+              <div className="grid gap-2 sm:grid-cols-2">
+                <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
+                  <span className="text-ink-soft">診療科</span>
+                  <select
+                    value={department}
+                    onChange={(e) => setDepartment(e.target.value)}
+                    disabled={submitting}
+                    aria-label="診療科"
+                    className="min-h-11 flex-1 rounded border border-ink-line bg-white px-3 py-2 text-base sm:min-h-0 sm:py-1.5 sm:text-sm"
+                  >
+                    <option value="">未選択</option>
+                    {departments.map((d) => (
+                      <option key={d} value={d}>
+                        {d}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
+                  <span className="text-ink-soft">術式</span>
+                  <select
+                    value={procedure}
+                    onChange={(e) => setProcedure(e.target.value)}
+                    disabled={submitting || !department}
+                    aria-label="術式"
+                    className="min-h-11 flex-1 rounded border border-ink-line bg-white px-3 py-2 text-base disabled:bg-gray-100 disabled:text-ink-muted sm:min-h-0 sm:py-1.5 sm:text-sm"
+                  >
+                    <option value="">
+                      {department ? "未選択" : "診療科を先に選択"}
+                    </option>
+                    {proceduresInDept.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              </div>
+            )}
             <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"

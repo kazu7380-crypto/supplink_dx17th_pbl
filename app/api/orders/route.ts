@@ -22,9 +22,11 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "invalid json" }, { status: 400 });
   }
 
-  const { room, lines } = (body ?? {}) as {
+  const { room, lines, department, procedure } = (body ?? {}) as {
     room?: unknown;
     lines?: unknown;
+    department?: unknown;
+    procedure?: unknown;
   };
 
   if (typeof room !== "string" || !ROOMS.includes(room)) {
@@ -71,8 +73,22 @@ export async function POST(request: Request) {
     cleaned.push(line);
   }
 
+  const dept =
+    typeof department === "string" && department.trim()
+      ? department.trim()
+      : undefined;
+  const proc =
+    typeof procedure === "string" && procedure.trim()
+      ? procedure.trim()
+      : undefined;
+
   try {
-    const order = await orderStore.create({ room, lines: cleaned });
+    const order = await orderStore.create({
+      room,
+      lines: cleaned,
+      department: dept,
+      procedure: proc,
+    });
     return NextResponse.json(order, { status: 201 });
   } catch (e) {
     console.error("[POST /api/orders]", e);

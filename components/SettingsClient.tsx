@@ -1,16 +1,18 @@
 "use client";
 
 import { useState } from "react";
-import { Database } from "lucide-react";
+import { Database, Stethoscope } from "lucide-react";
 import type { Item } from "@/lib/types";
 import { ItemMasterTab } from "./ItemMasterTab";
+import { ProceduresTab } from "./ProceduresTab";
 
 type Props = { defaultItems: Item[] };
 
-type TabKey = "items";
+type TabKey = "items" | "procedures";
 
 const TABS: ReadonlyArray<{ key: TabKey; label: string; icon: React.ReactNode }> = [
   { key: "items", label: "物品マスタ", icon: <Database size={16} aria-hidden /> },
+  { key: "procedures", label: "診療科・術式", icon: <Stethoscope size={16} aria-hidden /> },
 ];
 
 export function SettingsClient({ defaultItems }: Props) {
@@ -45,6 +47,7 @@ export function SettingsClient({ defaultItems }: Props) {
       </nav>
       <section className="min-w-0">
         {active === "items" && <ItemMasterTab defaultItems={defaultItems} />}
+        {active === "procedures" && <ProceduresTab />}
       </section>
     </div>
   );

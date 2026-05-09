@@ -49,8 +49,17 @@ export type Order = {
   status: OrderStatus;
   pickedAt?: string;
   deliveredAt?: string;
+  department?: string;
+  procedure?: string;
   /** legacy field kept for migration of older history records */
   completedAt?: string;
+};
+
+/** 診療科×術式マスタの 1 行 */
+export type Procedure = {
+  id: number;
+  department: string;
+  name: string;
 };
 
 /**
