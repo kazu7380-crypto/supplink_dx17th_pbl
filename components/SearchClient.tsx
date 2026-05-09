@@ -132,8 +132,8 @@ export function SearchClient({ items: defaultItems }: Props) {
                     className="absolute left-0 top-3 h-6 w-1 rounded-r bg-ink"
                   />
                 )}
-                <div className="flex items-stretch justify-between gap-2">
-                  <div className="flex min-w-0 items-stretch gap-2">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex min-w-0 items-start gap-2">
                     <button
                       type="button"
                       onClick={(e) => {
@@ -142,12 +142,9 @@ export function SearchClient({ items: defaultItems }: Props) {
                       }}
                       aria-label={`${item.name} の写真を拡大`}
                       title="写真を拡大"
-                      className="aspect-square h-auto cursor-zoom-in self-stretch rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+                      className="cursor-zoom-in rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                     >
-                      <ItemPhotoThumb
-                        code={item.code}
-                        className="h-full w-full"
-                      />
+                      <ItemPhotoThumb code={item.code} size={64} />
                     </button>
                     <div className="min-w-0">
                       {item.category && (
