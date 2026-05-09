@@ -149,9 +149,13 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     }
   };
 
-  const requested = orders.filter((o) => o.status === "requested");
-  const picking = orders.filter((o) => o.status === "picking");
-  const delivered = orders.filter((o) => o.status === "delivered");
+  const todayOrders = orders.filter((o) => isToday(o.createdAt));
+  const requested = todayOrders.filter((o) => o.status === "requested");
+  const picking = todayOrders.filter((o) => o.status === "picking");
+  // 配送済みは本日分のみ、最新10件まで
+  const allDeliveredToday = todayOrders.filter((o) => o.status === "delivered");
+  const delivered = allDeliveredToday.slice(0, 10);
+  const deliveredOverflow = Math.max(0, allDeliveredToday.length - delivered.length);
 
   return (
     <div>
@@ -190,7 +194,7 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
       <Section
         title={`${ORDER_STATUS_LABEL.requested} (${requested.length})`}
         icon={<Circle size={16} aria-hidden />}
-        emptyText="依頼中のオーダーはありません"
+        emptyText="本日の依頼中オーダーはありません"
       >
         {requested.map((o) => (
           <OrderCard key={o.id} order={o} itemMap={itemMap} />
@@ -200,7 +204,7 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
       <Section
         title={`${ORDER_STATUS_LABEL.picking} (${picking.length})`}
         icon={<Loader2 size={16} aria-hidden />}
-        emptyText="ピッキング中のオーダーはありません"
+        emptyText="本日のピッキング中オーダーはありません"
       >
         {picking.map((o) => (
           <OrderCard key={o.id} order={o} itemMap={itemMap} />
@@ -208,14 +212,19 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
       </Section>
 
       <Section
-        title={`${ORDER_STATUS_LABEL.delivered} (${delivered.length})`}
+        title={`${ORDER_STATUS_LABEL.delivered} (本日 ${allDeliveredToday.length})`}
         icon={<CheckCircle2 size={16} aria-hidden />}
-        emptyText="配送済のオーダーはありません"
+        emptyText="本日の配送済オーダーはありません"
       >
         {delivered.map((o) => (
           <OrderCard key={o.id} order={o} itemMap={itemMap} />
         ))}
       </Section>
+      {deliveredOverflow > 0 && (
+        <p className="-mt-3 mb-6 text-xs text-ink-muted">
+          直近10件のみ表示しています（残り {deliveredOverflow} 件は履歴で確認できます）
+        </p>
+      )}
     </div>
   );
 }
@@ -315,4 +324,14 @@ function formatTime(iso: string): string {
   const d = new Date(iso);
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function isToday(iso: string): boolean {
+  const d = new Date(iso);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
