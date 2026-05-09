@@ -171,12 +171,12 @@ export function SearchClient({ items: defaultItems }: Props) {
                     </span>
                   )}
                 </div>
-                <div className="mt-2 flex items-end justify-between gap-2 text-xs">
-                  <span className="min-w-0 truncate text-ink-muted">
+                <div className="mt-2 flex items-end justify-between gap-2">
+                  <span className="min-w-0 truncate text-xs text-ink-muted">
                     {item.memo ? `メモ: ${item.memo}` : ""}
                   </span>
                   {item.shelf && (
-                    <span className="shrink-0 font-bold text-ink">
+                    <span className="shrink-0 text-2xl font-bold leading-none text-ink">
                       {item.shelf}
                     </span>
                   )}

@@ -188,7 +188,7 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                   <ItemPhotoThumb item={it} size={64} />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div
                         className={[
@@ -206,24 +206,29 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                       >
                         {it.spec}
                       </div>
+                      <div className="mt-1 text-xs text-ink-muted">
+                        #{line.itemCode}
+                      </div>
+                      {it.memo && (
+                        <div className="mt-0.5 text-xs text-ink-muted">
+                          メモ: {it.memo}
+                        </div>
+                      )}
                     </div>
-                    <div className="shrink-0 text-right">
+                    <div className="flex shrink-0 flex-col items-end gap-2 text-right">
                       <div className="text-lg font-semibold tabular-nums leading-none">
                         × {line.quantity}
                       </div>
+                      <div
+                        className={[
+                          "text-3xl font-bold leading-none",
+                          dim ? "text-ink-muted" : "text-ink",
+                        ].join(" ")}
+                      >
+                        {it.shelf || "棚?"}
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
-                    <span className="font-bold text-ink">
-                      {it.shelf || "棚未設定"}
-                    </span>
-                    <span className="text-ink-muted">#{line.itemCode}</span>
-                  </div>
-                  {it.memo && (
-                    <div className="mt-0.5 text-xs text-ink-muted">
-                      メモ: {it.memo}
-                    </div>
-                  )}
                 </div>
               </div>
 
