@@ -1,32 +1,98 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Trash2 } from "lucide-react";
 import type { Item, Order, OrderStatus } from "@/lib/types";
 import { ORDER_STATUS_LABEL } from "@/lib/types";
-import { clearHistory, loadHistory } from "@/lib/historyStore";
 import { useItems } from "@/lib/useItems";
+import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
-type Props = { items: Item[] };
+type Props = { items: Item[]; initialOrders: Order[] };
 
 type StatusFilter = "all" | OrderStatus;
 
-export function HistoryClient({ items: defaultItems }: Props) {
+type DbRow = {
+  id: string;
+  room: string;
+  lines: { itemCode: number; quantity: number }[];
+  status: OrderStatus;
+  created_at: string;
+  picked_at: string | null;
+  delivered_at: string | null;
+};
+
+function rowToOrder(row: DbRow): Order {
+  return {
+    id: row.id,
+    room: row.room,
+    lines: row.lines,
+    status: row.status,
+    createdAt: row.created_at,
+    pickedAt: row.picked_at ?? undefined,
+    deliveredAt: row.delivered_at ?? undefined,
+  };
+}
+
+async function fetchAllOrders(): Promise<Order[]> {
+  const sb = getSupabaseBrowser();
+  const { data, error } = await sb
+    .from("orders")
+    .select("id, room, lines, status, created_at, picked_at, delivered_at")
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[HistoryClient.fetch]", error);
+    throw error;
+  }
+  return (data ?? []).map((r) => rowToOrder(r as DbRow));
+}
+
+export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
   const items = useItems(defaultItems);
   const itemMap = useMemo(
     () => new Map(items.map((i) => [i.code, i])),
     [items],
   );
 
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [dateFilter, setDateFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [roomFilter, setRoomFilter] = useState<string>("");
 
+  // Subscribe to Realtime so the history view refreshes when other devices
+  // create / advance / delete orders.
   useEffect(() => {
-    setOrders(loadHistory());
-    setHydrated(true);
+    const refresh = async () => {
+      try {
+        const fresh = await fetchAllOrders();
+        setOrders(fresh);
+      } catch {
+        /* keep current snapshot */
+      }
+    };
+
+    let channel: ReturnType<ReturnType<typeof getSupabaseBrowser>["channel"]> | null = null;
+    try {
+      const sb = getSupabaseBrowser();
+      channel = sb
+        .channel("history-orders")
+        .on(
+          "postgres_changes",
+          { event: "*", schema: "public", table: "orders" },
+          () => refresh(),
+        )
+        .subscribe();
+    } catch (e) {
+      console.error("[HistoryClient] subscribe failed", e);
+    }
+
+    return () => {
+      if (channel) {
+        try {
+          getSupabaseBrowser().removeChannel(channel);
+        } catch {
+          /* ignore */
+        }
+      }
+    };
   }, []);
 
   const rooms = useMemo(() => {
@@ -44,13 +110,6 @@ export function HistoryClient({ items: defaultItems }: Props) {
       .filter((o) => (roomFilter === "" ? true : o.room === roomFilter))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [orders, dateFilter, statusFilter, roomFilter]);
-
-  const handleClear = () => {
-    if (typeof window === "undefined") return;
-    if (!window.confirm("この端末に保存された履歴をすべて削除します。よろしいですか？")) return;
-    clearHistory();
-    setOrders([]);
-  };
 
   return (
     <div>
@@ -103,20 +162,16 @@ export function HistoryClient({ items: defaultItems }: Props) {
           </select>
         </label>
         <span className="text-sm text-ink-muted">{filtered.length} 件</span>
-        <button
-          type="button"
-          onClick={handleClear}
-          disabled={orders.length === 0}
-          className="ml-auto inline-flex items-center gap-1 rounded border border-red-300 bg-white px-3 py-1.5 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          <Trash2 size={14} aria-hidden /> 履歴を削除
-        </button>
       </div>
 
-      {!hydrated ? (
-        <Empty text="読み込み中..." />
-      ) : filtered.length === 0 ? (
-        <Empty text={orders.length === 0 ? "履歴はまだありません" : "条件に一致する履歴はありません"} />
+      {filtered.length === 0 ? (
+        <Empty
+          text={
+            orders.length === 0
+              ? "履歴はまだありません"
+              : "条件に一致する履歴はありません"
+          }
+        />
       ) : (
         <div className="overflow-x-auto rounded-lg border border-ink-line bg-white">
           <table className="w-full text-sm">

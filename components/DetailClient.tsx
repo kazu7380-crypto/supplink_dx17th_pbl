@@ -7,7 +7,6 @@ import { ArrowLeft, Check, CheckCircle2, PlayCircle, Trash2 } from "lucide-react
 import type { Item, Order, OrderStatus } from "@/lib/types";
 import { ORDER_STATUS_LABEL, nextOrderStatus } from "@/lib/types";
 import { useItems } from "@/lib/useItems";
-import { removeFromHistory, upsertHistory } from "@/lib/historyStore";
 import { clearChecks, loadChecks, saveChecks } from "@/lib/pickingChecksStore";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
 
@@ -65,7 +64,6 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
       const res = await fetch(`/api/orders/${order.id}`, { method: "DELETE" });
       if (res.ok) {
         clearChecks(order.id);
-        removeFromHistory(order.id);
         router.push("/status");
         router.refresh();
         return;
@@ -95,7 +93,6 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
       ...(target === "delivered" ? { deliveredAt: new Date().toISOString() } : {}),
     };
     setOrder(optimistic);
-    upsertHistory(optimistic);
 
     try {
       const res = await fetch(`/api/orders/${order.id}`, {
@@ -106,7 +103,6 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
       if (res.ok) {
         const updated = (await res.json()) as Order;
         setOrder(updated);
-        upsertHistory(updated);
         if (target === "delivered") clearChecks(order.id);
         router.refresh();
       }

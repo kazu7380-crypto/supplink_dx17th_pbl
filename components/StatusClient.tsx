@@ -6,7 +6,6 @@ import { Bell, BellOff, CheckCircle2, Circle, Loader2, Wifi, WifiOff } from "luc
 import type { Item, Order, OrderStatus } from "@/lib/types";
 import { ORDER_STATUS_LABEL } from "@/lib/types";
 import { alarm, unlockAudio } from "@/lib/beep";
-import { upsertHistory, upsertManyHistory } from "@/lib/historyStore";
 import { useItems } from "@/lib/useItems";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
@@ -54,10 +53,6 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     audioOnRef.current = audioOn;
   }, [audioOn]);
 
-  useEffect(() => {
-    upsertManyHistory(initialOrders);
-  }, [initialOrders]);
-
   // Restore audio preference and arm auto-unlock on first interaction.
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -99,7 +94,6 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
             if (prev.some((o) => o.id === order.id)) return prev;
             return [order, ...prev];
           });
-          upsertHistory(order);
           if (!seenIdsRef.current.has(order.id)) {
             seenIdsRef.current.add(order.id);
             if (audioOnRef.current) alarm();
@@ -115,7 +109,6 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
         (payload) => {
           const order = rowToOrder(payload.new as DbRow);
           setOrders((prev) => prev.map((o) => (o.id === order.id ? order : o)));
-          upsertHistory(order);
         },
       )
       .on(
