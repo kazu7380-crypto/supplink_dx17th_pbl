@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import type { Item, Order, OrderStatus } from "@/lib/types";
-import { ORDER_STATUS_LABEL } from "@/lib/types";
+import type { Item, Order, OrderLine, OrderStatus } from "@/lib/types";
+import { ORDER_STATUS_LABEL, lineDisplayItem } from "@/lib/types";
 import { useItems } from "@/lib/useItems";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
@@ -13,7 +13,7 @@ type StatusFilter = "all" | OrderStatus;
 type DbRow = {
   id: string;
   room: string;
-  lines: { itemCode: number; quantity: number }[];
+  lines: OrderLine[];
   status: OrderStatus;
   created_at: string;
   picked_at: string | null;
@@ -217,11 +217,11 @@ function HistoryCard({
       </div>
       <ul className="mt-2 space-y-0.5 border-t border-ink-line pt-2 text-sm">
         {order.lines.map((l) => {
-          const it = itemMap.get(l.itemCode);
+          const it = lineDisplayItem(l, itemMap);
           return (
             <li key={l.itemCode} className="flex items-baseline gap-2">
               <span className="min-w-0 flex-1 truncate">
-                {it ? `${it.name} ${it.spec}` : `#${l.itemCode}`}
+                {`${it.name} ${it.spec}`.trim()}
               </span>
               <span className="shrink-0 tabular-nums text-ink-muted">
                 × {l.quantity}

@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Check, CheckCircle2, PlayCircle, Trash2 } from "lucide-react";
 import type { Item, Order, OrderStatus } from "@/lib/types";
-import { ORDER_STATUS_LABEL, nextOrderStatus } from "@/lib/types";
+import { ORDER_STATUS_LABEL, lineDisplayItem, nextOrderStatus } from "@/lib/types";
 import { useItems } from "@/lib/useItems";
 import { clearChecks, loadChecks, saveChecks } from "@/lib/pickingChecksStore";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
@@ -165,7 +165,7 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
 
       <ul className="mt-4 space-y-2">
         {order.lines.map((line) => {
-          const it = itemMap.get(line.itemCode);
+          const it = lineDisplayItem(line, itemMap);
           const isChecked = checked.has(line.itemCode);
           const dim = showCheckbox && isChecked;
           return (
@@ -191,7 +191,7 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                           dim ? "text-ink-muted line-through" : "",
                         ].join(" ")}
                       >
-                        {it?.name ?? `#${line.itemCode}`}
+                        {it.name}
                       </div>
                       <div
                         className={[
@@ -199,7 +199,7 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                           dim ? "text-ink-muted" : "text-ink-soft",
                         ].join(" ")}
                       >
-                        {it?.spec ?? ""}
+                        {it.spec}
                       </div>
                     </div>
                     <div className="shrink-0 text-right">
@@ -210,11 +210,11 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
                     <span className="font-bold text-ink">
-                      {it?.shelf || "棚未設定"}
+                      {it.shelf || "棚未設定"}
                     </span>
                     <span className="text-ink-muted">#{line.itemCode}</span>
                   </div>
-                  {it?.memo && (
+                  {it.memo && (
                     <div className="mt-0.5 text-xs text-ink-muted">
                       メモ: {it.memo}
                     </div>
@@ -230,8 +230,8 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                     aria-pressed={isChecked}
                     aria-label={
                       isChecked
-                        ? `${it?.name ?? line.itemCode} のチェックを外す`
-                        : `${it?.name ?? line.itemCode} をチェック`
+                        ? `${it.name} のチェックを外す`
+                        : `${it.name} をチェック`
                     }
                     className={[
                       "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border-2 px-4 py-2 text-sm font-semibold transition",

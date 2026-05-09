@@ -1,5 +1,5 @@
 import { getSupabaseServer } from "./supabaseServer";
-import type { CartLine, Order, OrderStatus } from "./types";
+import type { Order, OrderLine, OrderStatus } from "./types";
 
 /**
  * Server-side order store backed by Supabase Postgres.
@@ -12,7 +12,7 @@ import type { CartLine, Order, OrderStatus } from "./types";
 type DbRow = {
   id: string;
   room: string;
-  lines: { itemCode: number; quantity: number }[];
+  lines: OrderLine[];
   status: OrderStatus;
   created_at: string;
   picked_at: string | null;
@@ -59,7 +59,7 @@ export const orderStore = {
     return data ? rowToOrder(data as DbRow) : null;
   },
 
-  async create(input: { room: string; lines: CartLine[] }): Promise<Order> {
+  async create(input: { room: string; lines: OrderLine[] }): Promise<Order> {
     const sb = getSupabaseServer();
     const { data, error } = await sb
       .from("orders")

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { orderStore } from "@/lib/db";
-import { ROOMS } from "@/lib/types";
+import { ROOMS, type OrderLine, type OrderLineSnapshot } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -34,15 +34,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "empty cart" }, { status: 400 });
   }
 
-  const cleaned: { itemCode: number; quantity: number }[] = [];
+  const cleaned: OrderLine[] = [];
   for (const raw of lines) {
     if (typeof raw !== "object" || raw === null) {
       return NextResponse.json({ error: "invalid line" }, { status: 400 });
     }
-    const { itemCode, quantity } = raw as {
-      itemCode?: unknown;
-      quantity?: unknown;
-    };
+    const r = raw as Record<string, unknown>;
+    const itemCode = r.itemCode;
+    const quantity = r.quantity;
     if (
       typeof itemCode !== "number" ||
       !Number.isInteger(itemCode) ||
@@ -54,7 +53,22 @@ export async function POST(request: Request) {
     ) {
       return NextResponse.json({ error: "invalid line" }, { status: 400 });
     }
-    cleaned.push({ itemCode, quantity });
+    const line: OrderLine = { itemCode, quantity };
+    if (r.snapshot && typeof r.snapshot === "object") {
+      const s = r.snapshot as Record<string, unknown>;
+      const snap: OrderLineSnapshot = {
+        name: typeof s.name === "string" ? s.name : "",
+        spec: typeof s.spec === "string" ? s.spec : "",
+        shelf: typeof s.shelf === "string" ? s.shelf : "",
+        memo: typeof s.memo === "string" ? s.memo : "",
+        category:
+          typeof s.category === "string" && s.category.trim()
+            ? s.category.trim()
+            : undefined,
+      };
+      line.snapshot = snap;
+    }
+    cleaned.push(line);
   }
 
   try {

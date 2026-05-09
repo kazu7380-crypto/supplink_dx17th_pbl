@@ -3,8 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Bell, BellOff, CheckCircle2, Circle, Loader2, Wifi, WifiOff } from "lucide-react";
-import type { Item, Order, OrderStatus } from "@/lib/types";
-import { ORDER_STATUS_LABEL } from "@/lib/types";
+import type { Item, Order, OrderLine, OrderStatus } from "@/lib/types";
+import { ORDER_STATUS_LABEL, lineDisplayItem } from "@/lib/types";
 import { alarm, unlockAudio } from "@/lib/beep";
 import { useItems } from "@/lib/useItems";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
@@ -16,7 +16,7 @@ const AUDIO_KEY = "or-supply-audio-on";
 type DbRow = {
   id: string;
   room: string;
-  lines: { itemCode: number; quantity: number }[];
+  lines: OrderLine[];
   status: OrderStatus;
   created_at: string;
   picked_at: string | null;
@@ -295,10 +295,10 @@ function OrderCard({
       </div>
       <ul className="mt-2 space-y-0.5 text-sm">
         {order.lines.slice(0, 3).map((l) => {
-          const it = itemMap.get(l.itemCode);
+          const it = lineDisplayItem(l, itemMap);
           return (
             <li key={l.itemCode} className="truncate">
-              {it ? `${it.name} ${it.spec}` : `#${l.itemCode}`}
+              {`${it.name} ${it.spec}`.trim()}
               <span className="ml-1 text-ink-muted">× {l.quantity}</span>
             </li>
           );

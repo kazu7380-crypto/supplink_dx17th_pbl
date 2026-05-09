@@ -63,10 +63,28 @@ export function CartModal() {
     setSubmitting(true);
     setError(null);
     try {
+      // 依頼時点の物品マスタをスナップショットとして同梱する。
+      // 後でマスタが書き換えられても履歴は依頼時の表示が保たれる。
+      const snapshottedLines = lines.map((l) => {
+        const it = itemMap.get(l.itemCode);
+        return {
+          itemCode: l.itemCode,
+          quantity: l.quantity,
+          snapshot: it
+            ? {
+                name: it.name,
+                spec: it.spec,
+                shelf: it.shelf,
+                memo: it.memo,
+                category: it.category,
+              }
+            : undefined,
+        };
+      });
       const res = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ room, lines }),
+        body: JSON.stringify({ room, lines: snapshottedLines }),
       });
       if (!res.ok) {
         const body = await res.json().catch(() => ({}));
