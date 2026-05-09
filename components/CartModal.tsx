@@ -193,7 +193,7 @@ export function CartModal() {
               className={[
                 "grid gap-2",
                 departments.length > 0
-                  ? "grid-cols-1 sm:grid-cols-3"
+                  ? "grid-cols-1 sm:grid-cols-[1fr_1fr_2fr]"
                   : "grid-cols-1",
               ].join(" ")}
             >
