@@ -164,16 +164,19 @@ export function SearchClient({ items: defaultItems }: Props) {
                     </span>
                   )}
                 </div>
-                <div className="mt-2 flex items-center gap-2 text-xs text-ink-muted">
-                  <span>#{item.code}</span>
-                  <span aria-hidden>·</span>
-                  <span>{item.shelf}</span>
+                <div className="mt-2 text-xs text-ink-muted">
+                  {item.category || " "}
                 </div>
-                {item.memo && (
-                  <div className="mt-1 text-xs text-ink-muted">
-                    メモ: {item.memo}
-                  </div>
-                )}
+                <div className="mt-1 flex items-end justify-between gap-2 text-xs">
+                  <span className="min-w-0 truncate text-ink-muted">
+                    {item.memo ? `メモ: ${item.memo}` : ""}
+                  </span>
+                  {item.shelf && (
+                    <span className="shrink-0 font-bold text-ink">
+                      {item.shelf}
+                    </span>
+                  )}
+                </div>
               </div>
             </li>
           );
