@@ -5,9 +5,15 @@ import { Camera, Trash2, Upload } from "lucide-react";
 import type { Item } from "@/lib/types";
 import { compressImage, deletePhoto, getPublicPhotoUrl, savePhoto } from "@/lib/photoStore";
 
-type Props = { item: Pick<Item, "code" | "photoPath" | "updatedAt"> };
+type Props = { item: Item };
 
 const ACCEPT = "image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png";
+
+function isHeicLike(file: File): boolean {
+  if (/\.(heic|heif)$/i.test(file.name)) return true;
+  const t = (file.type || "").toLowerCase();
+  return t.includes("heic") || t.includes("heif");
+}
 
 export function ItemPhotoEditor({ item }: Props) {
   const code = item.code;
@@ -20,17 +26,37 @@ export function ItemPhotoEditor({ item }: Props) {
 
   const handleFile = async (file: File) => {
     setError(null);
+    if (isHeicLike(file)) {
+      setError(
+        "HEIC形式は非対応です。iPhoneの設定 → カメラ → フォーマット を「互換性優先」に変更してから撮影し直してください。",
+      );
+      return;
+    }
     if (!file.type.startsWith("image/") && !/\.(jpe?g|png)$/i.test(file.name)) {
-      setError("JPG / JPEG / PNG ファイルを選択してください");
+      setError(
+        `JPG / JPEG / PNG ファイルを選択してください（検出: ${file.type || file.name}）`,
+      );
       return;
     }
     setBusy(true);
     try {
       const blob = await compressImage(file, 80_000);
-      await savePhoto(code, blob);
+      await savePhoto(code, blob, {
+        name: item.name,
+        spec: item.spec,
+        shelf: item.shelf,
+        memo: item.memo,
+        category: item.category,
+      });
     } catch (err) {
-      console.error(err);
-      setError("写真の保存に失敗しました");
+      console.error("[ItemPhotoEditor] save failed", err);
+      const msg =
+        err instanceof Error
+          ? err.message
+          : typeof err === "object" && err !== null && "message" in err
+            ? String((err as { message: unknown }).message)
+            : String(err);
+      setError(`写真の保存に失敗しました: ${msg}`);
     } finally {
       setBusy(false);
     }

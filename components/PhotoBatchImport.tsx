@@ -19,7 +19,10 @@ type Row = {
 const ACCEPT = "image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png";
 
 export function PhotoBatchImport({ items }: Props) {
-  const codeSet = useMemo(() => new Set(items.map((i) => i.code)), [items]);
+  const itemByCode = useMemo(
+    () => new Map(items.map((i) => [i.code, i])),
+    [items],
+  );
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -64,18 +67,26 @@ export function PhotoBatchImport({ items }: Props) {
         update({ status: "no-match", message: "ファイル名から物品コードを抽出できませんでした" });
         continue;
       }
-      if (!codeSet.has(row.code)) {
+      const matchingItem = itemByCode.get(row.code);
+      if (!matchingItem) {
         update({ status: "no-match", message: `物品コード ${row.code} が物品マスタに存在しません` });
         continue;
       }
 
       try {
         const blob = await compressImage(file, 80_000);
-        await savePhoto(row.code, blob);
+        await savePhoto(row.code, blob, {
+          name: matchingItem.name,
+          spec: matchingItem.spec,
+          shelf: matchingItem.shelf,
+          memo: matchingItem.memo,
+          category: matchingItem.category,
+        });
         update({ status: "success" });
       } catch (err) {
         console.error(err);
-        update({ status: "save-error", message: "保存に失敗しました" });
+        const msg = err instanceof Error ? err.message : "保存に失敗しました";
+        update({ status: "save-error", message: msg });
       }
     }
 

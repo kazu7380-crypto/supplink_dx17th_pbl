@@ -21,8 +21,21 @@ function pathFor(code: number): string {
  * Upload (or overwrite) a photo for the given item code.
  * 1. Compress / put the blob into Supabase Storage with upsert
  * 2. Update items.photo_path so other clients see the new photo via Realtime
+ *
+ * `fallback` を渡すと、items テーブルにまだ行が無い場合（バンドル fallback の
+ * 物品に写真を付けるケース）に INSERT してから photo_path を設定する。
  */
-export async function savePhoto(code: number, blob: Blob): Promise<void> {
+export async function savePhoto(
+  code: number,
+  blob: Blob,
+  fallback?: {
+    name: string;
+    spec?: string;
+    shelf?: string;
+    memo?: string;
+    category?: string;
+  },
+): Promise<void> {
   const sb = getSupabaseBrowser();
   const path = pathFor(code);
 
@@ -36,13 +49,47 @@ export async function savePhoto(code: number, blob: Blob): Promise<void> {
     throw upErr;
   }
 
-  const { error: itemErr } = await sb
+  // items に該当行があるか確認
+  const { data: existing, error: selErr } = await sb
     .from("items")
-    .update({ photo_path: path })
-    .eq("code", code);
-  if (itemErr) {
-    console.error("[photoStore.save/items-update]", itemErr);
-    throw itemErr;
+    .select("code")
+    .eq("code", code)
+    .maybeSingle();
+  if (selErr) {
+    console.error("[photoStore.save/items-select]", selErr);
+    throw selErr;
+  }
+
+  if (existing) {
+    const { error: itemErr } = await sb
+      .from("items")
+      .update({ photo_path: path })
+      .eq("code", code);
+    if (itemErr) {
+      console.error("[photoStore.save/items-update]", itemErr);
+      throw itemErr;
+    }
+    return;
+  }
+
+  // 行が無い → バンドル fallback の物品。fallback 情報があれば INSERT。
+  if (!fallback) {
+    throw new Error(
+      `物品コード ${code} が物品マスタに存在しません。先に CSV を取り込んでください。`,
+    );
+  }
+  const { error: insErr } = await sb.from("items").insert({
+    code,
+    name: fallback.name,
+    spec: fallback.spec ?? "",
+    shelf: fallback.shelf ?? "",
+    memo: fallback.memo ?? "",
+    category: fallback.category ?? null,
+    photo_path: path,
+  });
+  if (insErr) {
+    console.error("[photoStore.save/items-insert]", insErr);
+    throw insErr;
   }
 }
 
