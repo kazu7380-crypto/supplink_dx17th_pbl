@@ -151,11 +151,10 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     return () => window.clearInterval(interval);
   }, [audioOn, pendingRequestedCount]);
 
-  // 通知音 ON の間はスクリーンスリープを防ぐ（受付端末を放置しても画面が
-  // 消えないようにする）。タブを離れると一旦解放されるので、再びアクティブ
-  // になった時に再取得する。
+  // 受付タブを開いている間は常にスクリーンスリープを防ぐ。
+  // 受付端末を放置しても画面が消えないようにする（通知音 ON/OFF と独立）。
+  // タブを離れると一旦解放されるので、再びアクティブになった時に再取得する。
   useEffect(() => {
-    if (!audioOn) return;
     if (typeof navigator === "undefined") return;
     const nav = navigator as Navigator & {
       wakeLock?: { request: (type: "screen") => Promise<unknown> };
@@ -190,7 +189,7 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
         sentinel.release().catch(() => {});
       }
     };
-  }, [audioOn]);
+  }, []);
 
   const toggleAudio = () => {
     if (!audioOn) {
