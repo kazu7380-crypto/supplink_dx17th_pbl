@@ -1,7 +1,10 @@
-import { items } from "@/lib/items";
+import { listItemsOrFallback } from "@/lib/itemsDb";
 import { HistoryClient } from "@/components/HistoryClient";
 
-export default function HistoryPage() {
+export const dynamic = "force-dynamic";
+
+export default async function HistoryPage() {
+  const items = await listItemsOrFallback();
   return (
     <div>
       <div className="mb-4">

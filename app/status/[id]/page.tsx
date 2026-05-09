@@ -1,5 +1,5 @@
 import { notFound } from "next/navigation";
-import { items } from "@/lib/items";
+import { listItemsOrFallback } from "@/lib/itemsDb";
 import { orderStore } from "@/lib/db";
 import { DetailClient } from "@/components/DetailClient";
 import type { Order } from "@/lib/types";
@@ -12,12 +12,13 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  let order: Order | null = null;
-  try {
-    order = await orderStore.get(id);
-  } catch (e) {
-    console.error("[OrderDetailPage] orderStore.get failed", e);
-  }
+  const [items, order] = await Promise.all([
+    listItemsOrFallback(),
+    orderStore.get(id).catch((e) => {
+      console.error("[OrderDetailPage] orderStore.get failed", e);
+      return null as Order | null;
+    }),
+  ]);
   if (!order) notFound();
 
   return (

@@ -1,8 +1,11 @@
-import { items } from "@/lib/items";
+import { listItemsOrFallback } from "@/lib/itemsDb";
 import { RoomGate } from "@/components/RoomGate";
 import { SearchClient } from "@/components/SearchClient";
 
-export default function HomePage() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const items = await listItemsOrFallback();
   return (
     <RoomGate>
       <div className="mb-4">

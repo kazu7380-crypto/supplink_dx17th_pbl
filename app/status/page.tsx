@@ -1,4 +1,4 @@
-import { items } from "@/lib/items";
+import { listItemsOrFallback } from "@/lib/itemsDb";
 import { orderStore } from "@/lib/db";
 import { StatusClient } from "@/components/StatusClient";
 import type { Order } from "@/lib/types";
@@ -6,12 +6,13 @@ import type { Order } from "@/lib/types";
 export const dynamic = "force-dynamic";
 
 export default async function StatusPage() {
-  let initialOrders: Order[] = [];
-  try {
-    initialOrders = await orderStore.list();
-  } catch (e) {
-    console.error("[StatusPage] orderStore.list failed", e);
-  }
+  const [items, initialOrders] = await Promise.all([
+    listItemsOrFallback(),
+    orderStore.list().catch((e) => {
+      console.error("[StatusPage] orderStore.list failed", e);
+      return [] as Order[];
+    }),
+  ]);
   return (
     <div>
       <div className="mb-4">
