@@ -101,7 +101,13 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
       if (res.ok) {
         const updated = (await res.json()) as Order;
         setOrder(updated);
-        if (target === "delivered") clearChecks(order.id);
+        if (target === "delivered") {
+          clearChecks(order.id);
+          // 配送完了したら受付画面に自動で戻る（配送済セクションに表示される）
+          router.push("/status");
+          router.refresh();
+          return;
+        }
         router.refresh();
       }
     } finally {

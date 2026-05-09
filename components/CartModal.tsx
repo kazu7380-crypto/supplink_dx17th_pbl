@@ -90,10 +90,10 @@ export function CartModal() {
       role="dialog"
       aria-modal="true"
       aria-label="カート"
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 px-2 sm:items-center sm:px-4"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-3 sm:px-4"
       onMouseDown={onBackdrop}
     >
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-t-lg bg-white shadow-xl sm:rounded-lg">
+      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
         <header className="flex items-center justify-between border-b border-ink-line px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <ShoppingCart size={18} aria-hidden className="shrink-0" />
