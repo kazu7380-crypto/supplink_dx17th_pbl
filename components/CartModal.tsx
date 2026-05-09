@@ -94,12 +94,12 @@ export function CartModal() {
       onMouseDown={onBackdrop}
     >
       <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-t-lg bg-white shadow-xl sm:rounded-lg">
-        <header className="flex items-center justify-between border-b border-ink-line px-5 py-3">
-          <div className="flex items-center gap-2">
-            <ShoppingCart size={18} aria-hidden />
-            <h2 className="text-base font-semibold">カート / 配送依頼</h2>
+        <header className="flex items-center justify-between border-b border-ink-line px-4 py-3 sm:px-5">
+          <div className="flex min-w-0 items-center gap-2">
+            <ShoppingCart size={18} aria-hidden className="shrink-0" />
+            <h2 className="truncate text-base font-semibold">カート / 配送依頼</h2>
             {!done && lines.length > 0 && (
-              <span className="text-xs text-ink-muted">
+              <span className="hidden text-xs text-ink-muted sm:inline">
                 {lines.length} 種類 / {count} 個
               </span>
             )}
@@ -109,13 +109,13 @@ export function CartModal() {
             aria-label="閉じる"
             disabled={submitting}
             onClick={() => close()}
-            className="rounded p-1 text-ink-muted hover:bg-gray-100 disabled:opacity-50"
+            className="shrink-0 rounded p-1 text-ink-muted hover:bg-gray-100 disabled:opacity-50"
           >
             <X size={18} />
           </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4">
+        <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-5 sm:py-4">
           {done ? (
             <SuccessView onContinue={close} />
           ) : lines.length === 0 ? (
@@ -136,19 +136,29 @@ export function CartModal() {
         </div>
 
         {!done && lines.length > 0 && (
-          <footer className="flex items-center gap-2 border-t border-ink-line bg-gray-50 px-5 py-3">
-            <div className="text-sm text-ink-soft">
-              手術室:{" "}
-              <span className="font-semibold text-ink">
-                {room || "未選択"}
+          <footer className="flex flex-col gap-2 border-t border-ink-line bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:px-5">
+            <div className="flex items-center justify-between gap-2 text-sm text-ink-soft sm:justify-start">
+              <span>
+                手術室:{" "}
+                <span className="font-semibold text-ink">
+                  {room || "未選択"}
+                </span>
               </span>
-            </div>
-            <div className="ml-auto flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => clear()}
                 disabled={submitting}
-                className="text-sm text-ink-muted hover:text-ink disabled:opacity-50"
+                className="text-xs text-ink-muted hover:text-ink disabled:opacity-50 sm:hidden"
+              >
+                すべて削除
+              </button>
+            </div>
+            <div className="flex items-center gap-2 sm:ml-auto">
+              <button
+                type="button"
+                onClick={() => clear()}
+                disabled={submitting}
+                className="hidden text-sm text-ink-muted hover:text-ink disabled:opacity-50 sm:inline"
               >
                 すべて削除
               </button>
@@ -156,7 +166,7 @@ export function CartModal() {
                 type="button"
                 onClick={() => close()}
                 disabled={submitting}
-                className="rounded border border-ink-line bg-white px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+                className="hidden rounded border border-ink-line bg-white px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50 sm:inline-flex"
               >
                 続けて検索
               </button>
@@ -164,7 +174,7 @@ export function CartModal() {
                 type="button"
                 disabled={submitting || !room}
                 onClick={submit}
-                className="inline-flex items-center gap-2 rounded bg-ink px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300"
+                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded bg-ink px-5 py-2.5 text-base font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300 sm:flex-none sm:text-sm"
               >
                 <Send size={16} aria-hidden />
                 {submitting ? "送信中..." : "配送依頼を送信"}
@@ -242,59 +252,64 @@ function CartLineRow({
   };
 
   return (
-    <li className="flex items-center gap-3 border-b border-ink-line p-3 last:border-b-0">
-      <ItemPhotoThumb item={item} size={48} />
-      <div className="min-w-0 flex-1">
-        <div className="font-semibold">{item.name}</div>
-        <div className="truncate text-sm text-ink-soft">{item.spec}</div>
-        <div className="text-xs text-ink-muted">
-          #{item.code} · {item.shelf}
+    <li className="border-b border-ink-line p-3 last:border-b-0">
+      <div className="flex items-start gap-3">
+        <ItemPhotoThumb item={item} size={56} />
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold leading-tight">{item.name}</div>
+          <div className="truncate text-sm text-ink-soft">{item.spec}</div>
+          <div className="mt-0.5 text-xs">
+            <span className="font-bold text-ink">{item.shelf}</span>
+            <span className="ml-2 text-ink-muted">#{item.code}</span>
+          </div>
         </div>
       </div>
-      <div className="flex items-center gap-1">
-        <button
-          type="button"
-          aria-label="数量を1減らす"
-          onClick={() => setQuantity(line.itemCode, line.quantity - 1)}
-          className="rounded border border-ink-line bg-white p-1.5 hover:bg-gray-50"
-        >
-          <Minus size={14} />
-        </button>
-        <input
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ""))}
-          onFocus={(e) => e.currentTarget.select()}
-          onClick={(e) => e.currentTarget.select()}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              (e.target as HTMLInputElement).blur();
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            aria-label="数量を1減らす"
+            onClick={() => setQuantity(line.itemCode, line.quantity - 1)}
+            className="inline-flex h-9 w-9 items-center justify-center rounded border border-ink-line bg-white hover:bg-gray-50"
+          >
+            <Minus size={16} />
+          </button>
+          <input
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value.replace(/[^0-9]/g, ""))}
+            onFocus={(e) => e.currentTarget.select()}
+            onClick={(e) => e.currentTarget.select()}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                (e.target as HTMLInputElement).blur();
+              }
+            }}
+            className="h-9 w-16 rounded border border-ink-line px-2 text-center tabular-nums"
+          />
+          <button
+            type="button"
+            aria-label="数量を1増やす"
+            onClick={() =>
+              setQuantity(line.itemCode, Math.min(9999, line.quantity + 1))
             }
-          }}
-          className="w-16 rounded border border-ink-line px-2 py-1.5 text-center tabular-nums"
-        />
+            className="inline-flex h-9 w-9 items-center justify-center rounded border border-ink-line bg-white hover:bg-gray-50"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
         <button
           type="button"
-          aria-label="数量を1増やす"
-          onClick={() =>
-            setQuantity(line.itemCode, Math.min(9999, line.quantity + 1))
-          }
-          className="rounded border border-ink-line bg-white p-1.5 hover:bg-gray-50"
+          aria-label="削除"
+          onClick={() => remove(line.itemCode)}
+          className="inline-flex h-9 w-9 items-center justify-center rounded text-ink-muted hover:bg-gray-100 hover:text-ink"
         >
-          <Plus size={14} />
+          <Trash2 size={16} />
         </button>
       </div>
-      <button
-        type="button"
-        aria-label="削除"
-        onClick={() => remove(line.itemCode)}
-        className="ml-1 rounded p-2 text-ink-muted hover:bg-gray-100 hover:text-ink"
-      >
-        <Trash2 size={16} />
-      </button>
     </li>
   );
 }

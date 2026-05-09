@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { AlertCircle, ChevronDown, ChevronRight, Image as ImageIcon, RotateCcw, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { Item } from "@/lib/types";
@@ -258,19 +258,19 @@ export function ItemMasterTab({ defaultItems }: Props) {
       </Section>
 
       <Section title={`物品一覧 (${items.length} 件)`} description="行をタップすると写真を登録できます。">
-        <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <input
             type="text"
             placeholder="名前・棚・コード等で検索"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            className="w-64 max-w-full rounded border border-ink-line bg-white px-3 py-1.5 text-sm"
+            className="w-full rounded border border-ink-line bg-white px-3 py-2 text-sm sm:w-64"
           />
           {categories.length > 0 && (
             <select
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
-              className="rounded border border-ink-line bg-white px-2 py-1.5 text-sm"
+              className="rounded border border-ink-line bg-white px-2 py-2 text-sm sm:py-1.5"
             >
               <option value="">すべてのカテゴリ</option>
               {categories.map((c) => (
@@ -284,70 +284,71 @@ export function ItemMasterTab({ defaultItems }: Props) {
             {filtered.length} 件表示
           </span>
         </div>
-        <div className="overflow-hidden rounded-lg border border-ink-line bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-ink-muted">
-              <tr>
-                <th className="w-10 px-2 py-2"></th>
-                <th className="w-16 px-2 py-2">写真</th>
-                <th className="w-20 px-2 py-2">コード</th>
-                <th className="px-2 py-2">名前 / 仕様</th>
-                <th className="px-2 py-2">棚</th>
-                <th className="px-2 py-2">メモ</th>
-                <th className="px-2 py-2">カテゴリ</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((it) => {
-                const open = expandedCode === it.code;
-                return (
-                  <Fragment key={it.code}>
-                    <tr
-                      className="cursor-pointer border-t border-ink-line align-top hover:bg-gray-50"
-                      onClick={() => setExpandedCode(open ? null : it.code)}
-                    >
-                      <td className="px-2 py-2 text-ink-muted">
-                        {open ? (
-                          <ChevronDown size={14} aria-hidden />
-                        ) : (
-                          <ChevronRight size={14} aria-hidden />
-                        )}
-                      </td>
-                      <td className="px-2 py-2">
-                        <ItemPhotoThumb item={it} size={40} />
-                      </td>
-                      <td className="px-2 py-2 tabular-nums">{it.code}</td>
-                      <td className="px-2 py-2">
-                        <div className="font-medium">{it.name}</div>
-                        <div className="text-xs text-ink-soft">{it.spec}</div>
-                      </td>
-                      <td className="px-2 py-2 text-ink-soft">{it.shelf}</td>
-                      <td className="px-2 py-2 text-ink-muted">{it.memo}</td>
-                      <td className="px-2 py-2 text-ink-soft">{it.category ?? ""}</td>
-                    </tr>
-                    {open && (
-                      <tr>
-                        <td colSpan={7} className="bg-gray-50 px-4 py-3">
-                          <div className="flex items-center gap-2 text-xs text-ink-soft">
-                            <ImageIcon size={14} aria-hidden /> 写真の登録 / 変更
-                          </div>
-                          <div className="mt-2">
-                            <ItemPhotoEditor item={it} />
-                          </div>
-                        </td>
-                      </tr>
+
+        <ul className="space-y-2">
+          {filtered.map((it) => {
+            const open = expandedCode === it.code;
+            return (
+              <li
+                key={it.code}
+                className="overflow-hidden rounded-lg border border-ink-line bg-white"
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpandedCode(open ? null : it.code)}
+                  aria-expanded={open}
+                  className="flex w-full items-start gap-3 p-3 text-left hover:bg-gray-50"
+                >
+                  <div className="shrink-0">
+                    <ItemPhotoThumb item={it} size={56} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    {it.category && (
+                      <div className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
+                        {it.category}
+                      </div>
                     )}
-                  </Fragment>
-                );
-              })}
-            </tbody>
-          </table>
-          {filtered.length === 0 && (
-            <div className="p-6 text-center text-sm text-ink-muted">
-              該当する物品はありません
-            </div>
-          )}
-        </div>
+                    <div className="text-sm font-semibold leading-tight">
+                      {it.name}
+                    </div>
+                    <div className="truncate text-xs text-ink-soft">
+                      {it.spec}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
+                      <span className="font-bold text-ink">{it.shelf}</span>
+                      <span className="text-ink-muted">#{it.code}</span>
+                      {it.memo && (
+                        <span className="text-ink-muted">メモ: {it.memo}</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="shrink-0 self-center text-ink-muted">
+                    {open ? (
+                      <ChevronDown size={16} aria-hidden />
+                    ) : (
+                      <ChevronRight size={16} aria-hidden />
+                    )}
+                  </div>
+                </button>
+                {open && (
+                  <div className="border-t border-ink-line bg-gray-50 p-3">
+                    <div className="flex items-center gap-2 text-xs text-ink-soft">
+                      <ImageIcon size={14} aria-hidden /> 写真の登録 / 変更
+                    </div>
+                    <div className="mt-2">
+                      <ItemPhotoEditor item={it} />
+                    </div>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        {filtered.length === 0 && (
+          <div className="rounded-lg border border-dashed border-ink-line bg-white p-6 text-center text-sm text-ink-muted">
+            該当する物品はありません
+          </div>
+        )}
       </Section>
     </div>
   );

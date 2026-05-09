@@ -17,9 +17,9 @@ export function SettingsClient({ defaultItems }: Props) {
   const [active, setActive] = useState<TabKey>("items");
 
   return (
-    <div className="grid gap-4 md:grid-cols-[200px_1fr]">
+    <div className="grid gap-3 md:grid-cols-[200px_1fr] md:gap-4">
       <nav
-        className="flex flex-row gap-1 overflow-x-auto rounded-lg border border-ink-line bg-white p-2 md:flex-col"
+        className="-mx-1 flex flex-row gap-1 overflow-x-auto rounded-lg border border-ink-line bg-white p-2 md:mx-0 md:flex-col"
         aria-label="設定タブ"
       >
         {TABS.map((t) => {
@@ -31,7 +31,7 @@ export function SettingsClient({ defaultItems }: Props) {
               onClick={() => setActive(t.key)}
               aria-pressed={isActive}
               className={[
-                "inline-flex items-center gap-2 rounded px-3 py-2 text-sm",
+                "inline-flex shrink-0 items-center gap-2 rounded px-3 py-2 text-sm",
                 isActive
                   ? "bg-ink text-white"
                   : "text-ink-soft hover:bg-gray-100",

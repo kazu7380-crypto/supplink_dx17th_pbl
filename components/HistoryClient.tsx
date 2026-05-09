@@ -57,8 +57,6 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [roomFilter, setRoomFilter] = useState<string>("");
 
-  // Subscribe to Realtime so the history view refreshes when other devices
-  // create / advance / delete orders.
   useEffect(() => {
     const refresh = async () => {
       try {
@@ -113,32 +111,34 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
 
   return (
     <div>
-      <div className="mb-4 flex flex-wrap items-center gap-3">
-        <label className="text-sm text-ink-soft">
-          日付
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="ml-2 rounded border border-ink-line bg-white px-2 py-1 text-sm"
-          />
-          {dateFilter && (
-            <button
-              type="button"
-              onClick={() => setDateFilter("")}
-              className="ml-1 rounded border border-ink-line bg-white px-2 py-1 text-xs text-ink-soft hover:bg-gray-50"
-              aria-label="日付フィルタを解除"
-            >
-              ×
-            </button>
-          )}
+      <div className="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+        <label className="flex flex-col text-xs text-ink-soft sm:flex-row sm:items-center sm:text-sm">
+          <span className="mb-1 sm:mb-0">日付</span>
+          <div className="flex items-center gap-1 sm:ml-2">
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="min-w-0 flex-1 rounded border border-ink-line bg-white px-2 py-1.5 text-sm sm:flex-none"
+            />
+            {dateFilter && (
+              <button
+                type="button"
+                onClick={() => setDateFilter("")}
+                className="shrink-0 rounded border border-ink-line bg-white px-2 py-1 text-xs text-ink-soft hover:bg-gray-50"
+                aria-label="日付フィルタを解除"
+              >
+                ×
+              </button>
+            )}
+          </div>
         </label>
-        <label className="text-sm text-ink-soft">
-          状態
+        <label className="flex flex-col text-xs text-ink-soft sm:flex-row sm:items-center sm:text-sm">
+          <span className="mb-1 sm:mb-0">状態</span>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-            className="ml-2 rounded border border-ink-line bg-white px-2 py-1 text-sm"
+            className="rounded border border-ink-line bg-white px-2 py-1.5 text-sm sm:ml-2"
           >
             <option value="all">すべて</option>
             <option value="requested">{ORDER_STATUS_LABEL.requested}</option>
@@ -146,12 +146,12 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
             <option value="delivered">{ORDER_STATUS_LABEL.delivered}</option>
           </select>
         </label>
-        <label className="text-sm text-ink-soft">
-          手術室
+        <label className="flex flex-col text-xs text-ink-soft sm:flex-row sm:items-center sm:text-sm">
+          <span className="mb-1 sm:mb-0">手術室</span>
           <select
             value={roomFilter}
             onChange={(e) => setRoomFilter(e.target.value)}
-            className="ml-2 rounded border border-ink-line bg-white px-2 py-1 text-sm"
+            className="rounded border border-ink-line bg-white px-2 py-1.5 text-sm sm:ml-2"
           >
             <option value="">すべて</option>
             {rooms.map((r) => (
@@ -161,7 +161,9 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
             ))}
           </select>
         </label>
-        <span className="text-sm text-ink-muted">{filtered.length} 件</span>
+        <span className="col-span-2 text-xs text-ink-muted sm:col-span-1">
+          {filtered.length} 件
+        </span>
       </div>
 
       {filtered.length === 0 ? (
@@ -173,66 +175,65 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
           }
         />
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-ink-line bg-white">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-ink-muted">
-              <tr>
-                <th className="px-3 py-2 whitespace-nowrap">受付日時</th>
-                <th className="px-3 py-2">手術室</th>
-                <th className="px-3 py-2">状態</th>
-                <th className="px-3 py-2 whitespace-nowrap">ピッキング開始</th>
-                <th className="px-3 py-2 whitespace-nowrap">配送完了</th>
-                <th className="px-3 py-2">内容</th>
-                <th className="px-3 py-2 text-right whitespace-nowrap">合計数量</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((o) => {
-                const totalQty = o.lines.reduce((s, l) => s + l.quantity, 0);
-                return (
-                  <tr key={o.id} className="border-t border-ink-line align-top">
-                    <td className="px-3 py-2 whitespace-nowrap">
-                      {formatDateTime(o.createdAt)}
-                    </td>
-                    <td className="px-3 py-2 font-medium">{o.room}</td>
-                    <td className="px-3 py-2">
-                      <span
-                        className={[
-                          "rounded px-2 py-0.5 text-xs font-medium",
-                          STATUS_BADGE[o.status],
-                        ].join(" ")}
-                      >
-                        {ORDER_STATUS_LABEL[o.status]}
-                      </span>
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-ink-muted">
-                      {o.pickedAt ? formatDateTime(o.pickedAt) : "-"}
-                    </td>
-                    <td className="px-3 py-2 whitespace-nowrap text-ink-muted">
-                      {o.deliveredAt ? formatDateTime(o.deliveredAt) : "-"}
-                    </td>
-                    <td className="px-3 py-2">
-                      <ul className="space-y-0.5">
-                        {o.lines.map((l) => {
-                          const it = itemMap.get(l.itemCode);
-                          return (
-                            <li key={l.itemCode}>
-                              {it ? `${it.name} ${it.spec}` : `#${l.itemCode}`}
-                              <span className="ml-1 text-ink-muted">× {l.quantity}</span>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                    </td>
-                    <td className="px-3 py-2 text-right tabular-nums">{totalQty}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+          {filtered.map((o) => (
+            <HistoryCard key={o.id} order={o} itemMap={itemMap} />
+          ))}
+        </ul>
       )}
     </div>
+  );
+}
+
+function HistoryCard({
+  order,
+  itemMap,
+}: {
+  order: Order;
+  itemMap: Map<number, Item>;
+}) {
+  const totalQty = order.lines.reduce((s, l) => s + l.quantity, 0);
+  return (
+    <li className="rounded-lg border border-ink-line bg-white p-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-base font-semibold">{order.room}</div>
+        <span
+          className={[
+            "shrink-0 rounded px-2 py-0.5 text-xs font-medium",
+            STATUS_BADGE[order.status],
+          ].join(" ")}
+        >
+          {ORDER_STATUS_LABEL[order.status]}
+        </span>
+      </div>
+      <div className="mt-1 space-y-0.5 text-xs text-ink-muted">
+        <div>受付: {formatDateTime(order.createdAt)}</div>
+        {order.pickedAt && (
+          <div>ピッキング開始: {formatDateTime(order.pickedAt)}</div>
+        )}
+        {order.deliveredAt && (
+          <div>配送完了: {formatDateTime(order.deliveredAt)}</div>
+        )}
+      </div>
+      <ul className="mt-2 space-y-0.5 border-t border-ink-line pt-2 text-sm">
+        {order.lines.map((l) => {
+          const it = itemMap.get(l.itemCode);
+          return (
+            <li key={l.itemCode} className="flex items-baseline gap-2">
+              <span className="min-w-0 flex-1 truncate">
+                {it ? `${it.name} ${it.spec}` : `#${l.itemCode}`}
+              </span>
+              <span className="shrink-0 tabular-nums text-ink-muted">
+                × {l.quantity}
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-2 text-right text-xs text-ink-muted">
+        合計 {totalQty} 個
+      </div>
+    </li>
   );
 }
 

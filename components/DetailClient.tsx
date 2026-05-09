@@ -29,7 +29,6 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
   const totalQty = order.lines.reduce((s, l) => s + l.quantity, 0);
   const showCheckbox = order.status === "picking";
 
-  // Load persisted checks on mount / order change.
   useEffect(() => {
     setChecked(new Set(loadChecks(order.id)));
   }, [order.id]);
@@ -82,7 +81,6 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
   const advance = async () => {
     const target = nextOrderStatus(order.status);
     if (!target) return;
-    // Block if picking → delivered without all items checked.
     if (order.status === "picking" && !allChecked) return;
     setBusy(true);
 
@@ -111,8 +109,11 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
     }
   };
 
+  const showAdvanceArea = canDelete || order.status !== "delivered";
+  const stickyPad = showAdvanceArea ? "pb-28 sm:pb-0" : "";
+
   return (
-    <div>
+    <div className={stickyPad}>
       <Link
         href="/status"
         className="inline-flex items-center gap-1 text-sm text-ink-soft hover:text-ink"
@@ -120,22 +121,22 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
         <ArrowLeft size={14} aria-hidden /> 受付に戻る
       </Link>
 
-      <div className="mt-3 rounded-lg border border-ink-line bg-white p-5">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="text-sm text-ink-muted">手術室</div>
-            <div className="text-2xl font-semibold">{order.room}</div>
+      <div className="mt-3 rounded-lg border border-ink-line bg-white p-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="min-w-0">
+            <div className="text-xs text-ink-muted">手術室</div>
+            <div className="text-2xl font-semibold leading-tight">{order.room}</div>
           </div>
           <span
             className={[
-              "rounded px-3 py-1 text-sm font-medium",
+              "shrink-0 rounded px-3 py-1 text-sm font-medium",
               STATUS_BADGE[order.status],
             ].join(" ")}
           >
             {ORDER_STATUS_LABEL[order.status]}
           </span>
         </div>
-        <div className="mt-2 grid gap-1 text-sm text-ink-muted sm:grid-cols-3">
+        <div className="mt-3 space-y-0.5 text-xs text-ink-muted sm:text-sm">
           <div>受付: {formatDateTime(order.createdAt)}</div>
           {order.pickedAt && (
             <div>ピッキング開始: {formatDateTime(order.pickedAt)}</div>
@@ -144,118 +145,130 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
             <div>配送完了: {formatDateTime(order.deliveredAt)}</div>
           )}
         </div>
-        <div className="mt-1 text-sm text-ink-muted">
-          {order.lines.length} 種類 / 合計 {totalQty} 個
+        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs sm:text-sm">
+          <span className="text-ink-soft">
+            {order.lines.length} 種類 / 合計 {totalQty} 個
+          </span>
           {showCheckbox && (
-            <span className="ml-2 inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+            <span className="inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
               チェック {checked.size} / {order.lines.length}
             </span>
           )}
         </div>
       </div>
 
-      <div className="mt-4 overflow-hidden rounded-lg border border-ink-line bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 text-left text-xs uppercase tracking-wide text-ink-muted">
-            <tr>
-              <th className="px-3 py-2">#</th>
-              <th className="px-3 py-2">写真</th>
-              <th className="px-3 py-2">材料名</th>
-              <th className="px-3 py-2">製品記号</th>
-              <th className="px-3 py-2">棚番号</th>
-              <th className="px-3 py-2">メモ</th>
-              <th className="px-3 py-2 text-right">数量</th>
-              {showCheckbox && (
-                <th className="px-3 py-2 text-center">チェック</th>
-              )}
-            </tr>
-          </thead>
-          <tbody>
-            {order.lines.map((line) => {
-              const it = itemMap.get(line.itemCode);
-              const isChecked = checked.has(line.itemCode);
-              const dim = showCheckbox && isChecked;
-              return (
-                <tr
-                  key={line.itemCode}
-                  className={[
-                    "border-t border-ink-line align-top transition",
-                    dim ? "bg-gray-100 text-ink-muted" : "",
-                  ].join(" ")}
-                >
-                  <td className="px-3 py-2 text-ink-muted">{line.itemCode}</td>
-                  <td className="px-3 py-2">
-                    <div className={dim ? "opacity-50" : ""}>
-                      <ItemPhotoThumb item={it} size={48} />
-                    </div>
-                  </td>
-                  <td
-                    className={[
-                      "px-3 py-2 font-medium",
-                      dim ? "line-through" : "",
-                    ].join(" ")}
-                  >
-                    {it?.name ?? "-"}
-                  </td>
-                  <td className={["px-3 py-2", dim ? "text-ink-muted" : "text-ink-soft"].join(" ")}>
-                    {it?.spec ?? "-"}
-                  </td>
-                  <td className={["px-3 py-2", dim ? "text-ink-muted" : "text-ink-soft"].join(" ")}>
-                    {it?.shelf ?? "-"}
-                  </td>
-                  <td className="px-3 py-2 text-ink-muted">{it?.memo || "-"}</td>
-                  <td className="px-3 py-2 text-right tabular-nums">
-                    {line.quantity}
-                  </td>
-                  {showCheckbox && (
-                    <td className="px-3 py-2 text-center">
-                      <button
-                        type="button"
-                        onClick={() => toggleChecked(line.itemCode)}
-                        aria-pressed={isChecked}
-                        aria-label={
-                          isChecked
-                            ? `${it?.name ?? line.itemCode} のチェックを外す`
-                            : `${it?.name ?? line.itemCode} をチェック`
-                        }
+      <ul className="mt-4 space-y-2">
+        {order.lines.map((line) => {
+          const it = itemMap.get(line.itemCode);
+          const isChecked = checked.has(line.itemCode);
+          const dim = showCheckbox && isChecked;
+          return (
+            <li
+              key={line.itemCode}
+              className={[
+                "rounded-lg border p-3 transition",
+                dim
+                  ? "border-emerald-300 bg-emerald-50/60"
+                  : "border-ink-line bg-white",
+              ].join(" ")}
+            >
+              <div className="flex items-start gap-3">
+                <div className={dim ? "shrink-0 opacity-50" : "shrink-0"}>
+                  <ItemPhotoThumb item={it} size={64} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div
                         className={[
-                          "inline-flex h-8 w-8 items-center justify-center rounded border-2 transition",
-                          isChecked
-                            ? "border-emerald-600 bg-emerald-600 text-white hover:opacity-90"
-                            : "border-ink-line bg-white text-transparent hover:border-ink",
+                          "text-base font-semibold leading-tight",
+                          dim ? "text-ink-muted line-through" : "",
                         ].join(" ")}
                       >
-                        <Check size={18} aria-hidden />
-                      </button>
-                    </td>
+                        {it?.name ?? `#${line.itemCode}`}
+                      </div>
+                      <div
+                        className={[
+                          "text-sm",
+                          dim ? "text-ink-muted" : "text-ink-soft",
+                        ].join(" ")}
+                      >
+                        {it?.spec ?? ""}
+                      </div>
+                    </div>
+                    <div className="shrink-0 text-right">
+                      <div className="text-lg font-semibold tabular-nums leading-none">
+                        × {line.quantity}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs">
+                    <span className="font-bold text-ink">
+                      {it?.shelf || "棚未設定"}
+                    </span>
+                    <span className="text-ink-muted">#{line.itemCode}</span>
+                  </div>
+                  {it?.memo && (
+                    <div className="mt-0.5 text-xs text-ink-muted">
+                      メモ: {it.memo}
+                    </div>
                   )}
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+                </div>
+              </div>
 
-      {(canDelete || order.status !== "delivered") && (
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            {canDelete && (
-              <button
-                type="button"
-                onClick={handleDelete}
-                disabled={busy}
-                className="inline-flex items-center gap-1 rounded border border-red-300 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <Trash2 size={14} aria-hidden /> 依頼を削除
-              </button>
-            )}
+              {showCheckbox && (
+                <div className="mt-3 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => toggleChecked(line.itemCode)}
+                    aria-pressed={isChecked}
+                    aria-label={
+                      isChecked
+                        ? `${it?.name ?? line.itemCode} のチェックを外す`
+                        : `${it?.name ?? line.itemCode} をチェック`
+                    }
+                    className={[
+                      "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg border-2 px-4 py-2 text-sm font-semibold transition",
+                      "w-full sm:w-auto",
+                      isChecked
+                        ? "border-emerald-600 bg-emerald-600 text-white hover:opacity-90"
+                        : "border-ink-line bg-white text-ink hover:border-ink",
+                    ].join(" ")}
+                  >
+                    <Check size={20} aria-hidden />
+                    {isChecked ? "チェック済み" : "ピッキング完了"}
+                  </button>
+                </div>
+              )}
+            </li>
+          );
+        })}
+      </ul>
+
+      {showAdvanceArea && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-line bg-white px-4 py-3 shadow-lg sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
+          <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div className="order-2 sm:order-1">
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={busy}
+                  className="inline-flex w-full items-center justify-center gap-1 rounded border border-red-300 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                >
+                  <Trash2 size={14} aria-hidden /> 依頼を削除
+                </button>
+              )}
+            </div>
+            <div className="order-1 sm:order-2">
+              <AdvanceButton
+                status={order.status}
+                busy={busy}
+                canAdvance={order.status !== "picking" || allChecked}
+                onClick={advance}
+              />
+            </div>
           </div>
-          <AdvanceButton
-            status={order.status}
-            busy={busy}
-            canAdvance={order.status !== "picking" || allChecked}
-            onClick={advance}
-          />
         </div>
       )}
     </div>
@@ -273,9 +286,7 @@ function AdvanceButton({
   canAdvance: boolean;
   onClick: () => void;
 }) {
-  if (status === "delivered") {
-    return null;
-  }
+  if (status === "delivered") return null;
   const label = status === "requested" ? "ピッキング開始" : "配送完了";
   const Icon = status === "requested" ? PlayCircle : CheckCircle2;
   const tone =
@@ -284,9 +295,9 @@ function AdvanceButton({
       : "bg-amber-600 hover:bg-amber-700";
   const disabled = busy || !canAdvance;
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center">
       {status === "picking" && !canAdvance && (
-        <span className="text-xs text-ink-muted">
+        <span className="text-xs text-ink-muted sm:text-right">
           全ての物品をチェックすると配送完了にできます
         </span>
       )}
@@ -295,11 +306,11 @@ function AdvanceButton({
         onClick={onClick}
         disabled={disabled}
         className={[
-          "inline-flex items-center gap-2 rounded px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300",
+          "inline-flex min-h-11 items-center justify-center gap-2 rounded px-5 py-2.5 text-base font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300 sm:text-sm",
           tone,
         ].join(" ")}
       >
-        <Icon size={16} aria-hidden />
+        <Icon size={18} aria-hidden />
         {busy ? "処理中..." : label}
       </button>
     </div>
