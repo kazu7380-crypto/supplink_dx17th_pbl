@@ -130,21 +130,81 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     };
   }, []);
 
+  const todayOrders = orders.filter((o) => isToday(o.createdAt));
+  const requested = todayOrders.filter((o) => o.status === "requested");
+  const picking = todayOrders.filter((o) => o.status === "picking");
+
+  // 「依頼中」の総件数（日付問わず）。残っている間はアラームを鳴らし続ける。
+  const pendingRequestedCount = useMemo(
+    () => orders.filter((o) => o.status === "requested").length,
+    [orders],
+  );
+
+  // 依頼中が残っている間 15 秒ごとにアラームを再鳴動させる。
+  // ピッキング中／配送済へ進めば自動で停止。
+  useEffect(() => {
+    if (!audioOn) return;
+    if (pendingRequestedCount === 0) return;
+    const interval = window.setInterval(() => {
+      alarm();
+    }, 15_000);
+    return () => window.clearInterval(interval);
+  }, [audioOn, pendingRequestedCount]);
+
+  // 通知音 ON の間はスクリーンスリープを防ぐ（受付端末を放置しても画面が
+  // 消えないようにする）。タブを離れると一旦解放されるので、再びアクティブ
+  // になった時に再取得する。
+  useEffect(() => {
+    if (!audioOn) return;
+    if (typeof navigator === "undefined") return;
+    const nav = navigator as Navigator & {
+      wakeLock?: { request: (type: "screen") => Promise<unknown> };
+    };
+    if (!nav.wakeLock) return;
+
+    let sentinel:
+      | (EventTarget & { release?: () => Promise<void>; released?: boolean })
+      | null = null;
+    let active = true;
+
+    const acquire = async () => {
+      try {
+        sentinel = (await nav.wakeLock!.request("screen")) as typeof sentinel;
+      } catch (e) {
+        console.warn("[Wake Lock] failed:", e);
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible" && active) {
+        acquire();
+      }
+    };
+
+    acquire();
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      active = false;
+      document.removeEventListener("visibilitychange", onVisibility);
+      if (sentinel?.release) {
+        sentinel.release().catch(() => {});
+      }
+    };
+  }, [audioOn]);
+
   const toggleAudio = () => {
     if (!audioOn) {
       const ok = unlockAudio();
       if (!ok) return;
       setAudioOn(true);
       localStorage.setItem(AUDIO_KEY, "true");
+      // 「依頼中」が残っていれば即座に1回鳴らしてユーザに状態を伝える
+      if (pendingRequestedCount > 0) alarm();
     } else {
       setAudioOn(false);
       localStorage.setItem(AUDIO_KEY, "false");
     }
   };
-
-  const todayOrders = orders.filter((o) => isToday(o.createdAt));
-  const requested = todayOrders.filter((o) => o.status === "requested");
-  const picking = todayOrders.filter((o) => o.status === "picking");
   // 配送済みは本日分のみ、最新10件まで
   const allDeliveredToday = todayOrders.filter((o) => o.status === "delivered");
   const delivered = allDeliveredToday.slice(0, 10);
@@ -177,6 +237,11 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
           {connected ? <Wifi size={12} /> : <WifiOff size={12} />}
           {connected ? "接続中" : "接続待ち..."}
         </span>
+        {audioOn && pendingRequestedCount > 0 && (
+          <span className="inline-flex animate-pulse items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-800">
+            <Bell size={12} aria-hidden /> アラーム中（依頼中 {pendingRequestedCount} 件）
+          </span>
+        )}
         {flash && (
           <span className="ml-auto rounded bg-yellow-200 px-3 py-1 text-sm font-medium text-yellow-900">
             {flash}
