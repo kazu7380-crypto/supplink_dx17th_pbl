@@ -1,13 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CheckCircle2, PlayCircle } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, PlayCircle } from "lucide-react";
 import type { Item, Order, OrderStatus } from "@/lib/types";
 import { ORDER_STATUS_LABEL, nextOrderStatus } from "@/lib/types";
 import { useItems } from "@/lib/useItems";
 import { upsertHistory } from "@/lib/historyStore";
+import { clearChecks, loadChecks, saveChecks } from "@/lib/pickingChecksStore";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
 
 type Props = { items: Item[]; order: Order };
@@ -23,16 +24,39 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
   const items = useItems(defaultItems);
   const [order, setOrder] = useState<Order>(initialOrder);
   const [busy, setBusy] = useState(false);
+  const [checked, setChecked] = useState<Set<number>>(new Set());
 
   const itemMap = new Map(items.map((i) => [i.code, i]));
   const totalQty = order.lines.reduce((s, l) => s + l.quantity, 0);
+  const showCheckbox = order.status === "picking";
+
+  // Load persisted checks on mount / order change.
+  useEffect(() => {
+    setChecked(new Set(loadChecks(order.id)));
+  }, [order.id]);
+
+  const allChecked = useMemo(() => {
+    if (order.lines.length === 0) return false;
+    return order.lines.every((l) => checked.has(l.itemCode));
+  }, [order.lines, checked]);
+
+  const toggleChecked = (code: number) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(code)) next.delete(code);
+      else next.add(code);
+      saveChecks(order.id, Array.from(next));
+      return next;
+    });
+  };
 
   const advance = async () => {
     const target = nextOrderStatus(order.status);
     if (!target) return;
+    // Block if picking → delivered without all items checked.
+    if (order.status === "picking" && !allChecked) return;
     setBusy(true);
 
-    // optimistic update
     const optimistic: Order = {
       ...order,
       status: target,
@@ -52,6 +76,7 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
         const updated = (await res.json()) as Order;
         setOrder(updated);
         upsertHistory(updated);
+        if (target === "delivered") clearChecks(order.id);
         router.refresh();
       }
     } finally {
@@ -94,6 +119,11 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
         </div>
         <div className="mt-1 text-sm text-ink-muted">
           {order.lines.length} 種類 / 合計 {totalQty} 個
+          {showCheckbox && (
+            <span className="ml-2 inline-flex items-center gap-1 rounded bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
+              チェック {checked.size} / {order.lines.length}
+            </span>
+          )}
         </div>
       </div>
 
@@ -108,33 +138,70 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
               <th className="px-3 py-2">棚番号</th>
               <th className="px-3 py-2">メモ</th>
               <th className="px-3 py-2 text-right">数量</th>
+              {showCheckbox && (
+                <th className="px-3 py-2 text-center">チェック</th>
+              )}
             </tr>
           </thead>
           <tbody>
             {order.lines.map((line) => {
               const it = itemMap.get(line.itemCode);
+              const isChecked = checked.has(line.itemCode);
+              const dim = showCheckbox && isChecked;
               return (
                 <tr
                   key={line.itemCode}
-                  className="border-t border-ink-line align-top"
+                  className={[
+                    "border-t border-ink-line align-top transition",
+                    dim ? "bg-gray-100 text-ink-muted" : "",
+                  ].join(" ")}
                 >
-                  <td className="px-3 py-2 text-ink-muted">
-                    {line.itemCode}
-                  </td>
+                  <td className="px-3 py-2 text-ink-muted">{line.itemCode}</td>
                   <td className="px-3 py-2">
-                    <ItemPhotoThumb code={line.itemCode} size={48} />
+                    <div className={dim ? "opacity-50" : ""}>
+                      <ItemPhotoThumb code={line.itemCode} size={48} />
+                    </div>
                   </td>
-                  <td className="px-3 py-2 font-medium">{it?.name ?? "-"}</td>
-                  <td className="px-3 py-2 text-ink-soft">{it?.spec ?? "-"}</td>
-                  <td className="px-3 py-2 text-ink-soft">
+                  <td
+                    className={[
+                      "px-3 py-2 font-medium",
+                      dim ? "line-through" : "",
+                    ].join(" ")}
+                  >
+                    {it?.name ?? "-"}
+                  </td>
+                  <td className={["px-3 py-2", dim ? "text-ink-muted" : "text-ink-soft"].join(" ")}>
+                    {it?.spec ?? "-"}
+                  </td>
+                  <td className={["px-3 py-2", dim ? "text-ink-muted" : "text-ink-soft"].join(" ")}>
                     {it?.shelf ?? "-"}
                   </td>
-                  <td className="px-3 py-2 text-ink-muted">
-                    {it?.memo || "-"}
-                  </td>
+                  <td className="px-3 py-2 text-ink-muted">{it?.memo || "-"}</td>
                   <td className="px-3 py-2 text-right tabular-nums">
                     {line.quantity}
                   </td>
+                  {showCheckbox && (
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        type="button"
+                        onClick={() => toggleChecked(line.itemCode)}
+                        aria-pressed={isChecked}
+                        aria-label={
+                          isChecked
+                            ? `${it?.name ?? line.itemCode} のチェックを外す`
+                            : `${it?.name ?? line.itemCode} をチェック`
+                        }
+                        className={[
+                          "inline-flex h-8 w-8 items-center justify-center rounded border-2 transition",
+                          isChecked
+                            ? "border-emerald-600 bg-emerald-600 text-white hover:opacity-90"
+                            : "border-ink-line bg-white text-transparent hover:border-ink",
+                        ].join(" ")}
+                      >
+                        <Check size={18} aria-hidden />
+                      </button>
+                    </td>
+                  )}
                 </tr>
               );
             })}
@@ -142,7 +209,12 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
         </table>
       </div>
 
-      <AdvanceButton status={order.status} busy={busy} onClick={advance} />
+      <AdvanceButton
+        status={order.status}
+        busy={busy}
+        canAdvance={order.status !== "picking" || allChecked}
+        onClick={advance}
+      />
     </div>
   );
 }
@@ -150,27 +222,35 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
 function AdvanceButton({
   status,
   busy,
+  canAdvance,
   onClick,
 }: {
   status: OrderStatus;
   busy: boolean;
+  canAdvance: boolean;
   onClick: () => void;
 }) {
   if (status === "delivered") {
     return null;
   }
-  const label = status === "requested" ? "ピッキング開始" : "配送完了にする";
+  const label = status === "requested" ? "ピッキング開始" : "配送完了";
   const Icon = status === "requested" ? PlayCircle : CheckCircle2;
   const tone =
     status === "requested"
       ? "bg-ink hover:opacity-90"
       : "bg-amber-600 hover:bg-amber-700";
+  const disabled = busy || !canAdvance;
   return (
-    <div className="mt-5 flex justify-end">
+    <div className="mt-5 flex items-center justify-end gap-2">
+      {status === "picking" && !canAdvance && (
+        <span className="text-xs text-ink-muted">
+          全ての物品をチェックすると配送完了にできます
+        </span>
+      )}
       <button
         type="button"
         onClick={onClick}
-        disabled={busy}
+        disabled={disabled}
         className={[
           "inline-flex items-center gap-2 rounded px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:bg-gray-300",
           tone,
