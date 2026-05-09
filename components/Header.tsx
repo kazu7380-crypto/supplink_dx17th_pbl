@@ -3,12 +3,9 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Search, ClipboardList, History, Settings } from "lucide-react";
-import { useRoom } from "./providers";
-import { ROOMS } from "@/lib/types";
 
 export function Header() {
   const pathname = usePathname();
-  const { room, setRoom } = useRoom();
 
   const isSupplySide = pathname.startsWith("/status");
   const isHistory =
@@ -46,24 +43,6 @@ export function Header() {
         </nav>
 
         <div className="ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
-          {!isSupplySide && !isSettings && (
-            <label className="flex items-center gap-1 text-sm text-ink-soft">
-              <span className="hidden sm:inline">手術室</span>
-              <select
-                value={room}
-                onChange={(e) => setRoom(e.target.value)}
-                className="rounded border border-ink-line bg-white px-2 py-1 text-sm"
-                aria-label="手術室"
-              >
-                <option value="">未選択</option>
-                {ROOMS.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
           <Link
             href="/settings"
             aria-label="設定"

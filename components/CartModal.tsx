@@ -13,12 +13,12 @@ import {
 import { useCart, useRoom } from "./providers";
 import { items as defaultItems } from "@/lib/items";
 import { useItems } from "@/lib/useItems";
-import type { CartLine, Item } from "@/lib/types";
+import { ROOMS, type CartLine, type Item } from "@/lib/types";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
 
 export function CartModal() {
   const { lines, setQuantity, remove, clear, count, isOpen, close } = useCart();
-  const { room } = useRoom();
+  const { room, setRoom } = useRoom();
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -136,29 +136,37 @@ export function CartModal() {
         </div>
 
         {!done && lines.length > 0 && (
-          <footer className="flex flex-col gap-2 border-t border-ink-line bg-gray-50 px-4 py-3 sm:flex-row sm:items-center sm:px-5">
-            <div className="flex items-center justify-between gap-2 text-sm text-ink-soft sm:justify-start">
-              <span>
-                手術室:{" "}
-                <span className="font-semibold text-ink">
-                  {room || "未選択"}
-                </span>
+          <footer className="flex flex-col gap-2 border-t border-ink-line bg-gray-50 px-4 py-3 sm:px-5">
+            <label className="flex flex-col gap-1 text-sm sm:flex-row sm:items-center sm:gap-2">
+              <span className="font-semibold text-ink">
+                手術室 <span className="text-red-600">*</span>
               </span>
-              <button
-                type="button"
-                onClick={() => clear()}
+              <select
+                value={room}
+                onChange={(e) => setRoom(e.target.value)}
                 disabled={submitting}
-                className="text-xs text-ink-muted hover:text-ink disabled:opacity-50 sm:hidden"
+                aria-label="手術室"
+                className={[
+                  "min-h-11 rounded border bg-white px-3 py-2 text-base sm:min-h-0 sm:py-1.5 sm:text-sm",
+                  room
+                    ? "border-ink-line"
+                    : "border-red-400 ring-1 ring-red-200",
+                ].join(" ")}
               >
-                すべて削除
-              </button>
-            </div>
-            <div className="flex items-center gap-2 sm:ml-auto">
+                <option value="">選択してください</option>
+                {ROOMS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 type="button"
                 onClick={() => clear()}
                 disabled={submitting}
-                className="hidden text-sm text-ink-muted hover:text-ink disabled:opacity-50 sm:inline"
+                className="text-sm text-ink-muted hover:text-ink disabled:opacity-50"
               >
                 すべて削除
               </button>
@@ -174,7 +182,8 @@ export function CartModal() {
                 type="button"
                 disabled={submitting || !room}
                 onClick={submit}
-                className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded bg-ink px-5 py-2.5 text-base font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300 sm:flex-none sm:text-sm"
+                title={!room ? "手術室を選択してください" : undefined}
+                className="ml-auto inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded bg-ink px-5 py-2.5 text-base font-semibold text-white disabled:cursor-not-allowed disabled:bg-gray-300 sm:flex-none sm:text-sm"
               >
                 <Send size={16} aria-hidden />
                 {submitting ? "送信中..." : "配送依頼を送信"}
