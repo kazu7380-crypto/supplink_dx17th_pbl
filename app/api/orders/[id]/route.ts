@@ -63,12 +63,6 @@ export async function DELETE(
     if (result === "not-found") {
       return NextResponse.json({ error: "not found" }, { status: 404 });
     }
-    if (result === "forbidden") {
-      return NextResponse.json(
-        { error: "配送済の依頼は削除できません" },
-        { status: 409 },
-      );
-    }
     return NextResponse.json({ ok: true });
   } catch (e) {
     console.error("[DELETE /api/orders/:id]", e);

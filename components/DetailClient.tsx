@@ -48,14 +48,19 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
     });
   };
 
-  const canDelete = order.status === "requested" || order.status === "picking";
+  // 全ステータスで削除可能（履歴の整理用）
+  const canDelete = true;
 
   const handleDelete = async () => {
     if (!canDelete) return;
     if (typeof window === "undefined") return;
     const label = ORDER_STATUS_LABEL[order.status];
+    const extra =
+      order.status === "delivered"
+        ? "配送済の履歴を削除します。\n"
+        : "";
     const ok = window.confirm(
-      `${order.room} の依頼（${label}）を削除します。\nこの操作は取り消せません。よろしいですか？`,
+      `${extra}${order.room} の依頼（${label}）を削除します。\nこの操作は取り消せません。よろしいですか？`,
     );
     if (!ok) return;
     setBusy(true);

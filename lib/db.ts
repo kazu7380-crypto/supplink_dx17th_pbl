@@ -78,19 +78,14 @@ export const orderStore = {
   },
 
   /**
-   * Hard-delete an order. Allowed only for `requested` / `picking` statuses;
-   * delivered orders are kept as a record. Returns:
+   * Hard-delete an order. Returns:
    *   - "deleted" : success
    *   - "not-found" : id doesn't exist
-   *   - "forbidden" : status doesn't allow deletion
    */
-  async delete(id: string): Promise<"deleted" | "not-found" | "forbidden"> {
+  async delete(id: string): Promise<"deleted" | "not-found"> {
     const sb = getSupabaseServer();
     const current = await this.get(id);
     if (!current) return "not-found";
-    if (current.status !== "requested" && current.status !== "picking") {
-      return "forbidden";
-    }
     const { error } = await sb.from("orders").delete().eq("id", id);
     if (error) {
       console.error("[orderStore.delete]", error);

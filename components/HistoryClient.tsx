@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Check, Trash2, X } from "lucide-react";
 import type { Item, Order, OrderLine, OrderStatus } from "@/lib/types";
 import { ORDER_STATUS_LABEL, lineDisplayItem } from "@/lib/types";
 import { useItems } from "@/lib/useItems";
@@ -57,6 +58,10 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [roomFilter, setRoomFilter] = useState<string>("");
 
+  const [deleteMode, setDeleteMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+
   useEffect(() => {
     const refresh = async () => {
       try {
@@ -108,6 +113,52 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
       .filter((o) => (roomFilter === "" ? true : o.room === roomFilter))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [orders, dateFilter, statusFilter, roomFilter]);
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const selectAllVisible = () => {
+    setSelectedIds(new Set(filtered.map((o) => o.id)));
+  };
+
+  const clearSelection = () => setSelectedIds(new Set());
+
+  const exitDeleteMode = () => {
+    setDeleteMode(false);
+    clearSelection();
+  };
+
+  const deleteSelected = async () => {
+    if (selectedIds.size === 0) return;
+    if (typeof window === "undefined") return;
+    const ok = window.confirm(
+      `${selectedIds.size} 件の依頼を削除します。\nこの操作は取り消せません。よろしいですか？`,
+    );
+    if (!ok) return;
+    setDeleting(true);
+    try {
+      const ids = Array.from(selectedIds);
+      // 並列で個別 DELETE。サーバ側は冪等なので失敗してもリトライ可能。
+      await Promise.allSettled(
+        ids.map((id) =>
+          fetch(`/api/orders/${id}`, { method: "DELETE" }).then((r) => {
+            if (!r.ok && r.status !== 404) throw new Error("delete failed");
+          }),
+        ),
+      );
+      // Realtime で削除イベントが届く想定だが、即時反映のためローカルからも除去
+      setOrders((prev) => prev.filter((o) => !selectedIds.has(o.id)));
+      exitDeleteMode();
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <div>
@@ -161,8 +212,27 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
             ))}
           </select>
         </label>
-        <span className="col-span-2 text-xs text-ink-muted sm:col-span-1">
-          {filtered.length} 件
+        <span className="col-span-2 flex items-center gap-2 text-xs text-ink-muted sm:col-span-1 sm:ml-auto">
+          <span>{filtered.length} 件</span>
+          {!deleteMode ? (
+            <button
+              type="button"
+              onClick={() => setDeleteMode(true)}
+              disabled={orders.length === 0}
+              className="ml-auto inline-flex items-center gap-1 rounded border border-red-300 bg-white px-2 py-1 text-xs text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <Trash2 size={12} aria-hidden /> 削除モード
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={exitDeleteMode}
+              disabled={deleting}
+              className="ml-auto inline-flex items-center gap-1 rounded border border-ink-line bg-white px-2 py-1 text-xs text-ink-soft hover:bg-gray-50 disabled:opacity-50"
+            >
+              <X size={12} aria-hidden /> 削除モード終了
+            </button>
+          )}
         </span>
       </div>
 
@@ -177,10 +247,57 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
       ) : (
         <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
           {filtered.map((o) => (
-            <HistoryCard key={o.id} order={o} itemMap={itemMap} />
+            <HistoryCard
+              key={o.id}
+              order={o}
+              itemMap={itemMap}
+              deleteMode={deleteMode}
+              selected={selectedIds.has(o.id)}
+              onToggle={() => toggleSelected(o.id)}
+            />
           ))}
         </ul>
       )}
+
+      {deleteMode && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-line bg-white px-4 py-3 shadow-lg">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center gap-2">
+            <span className="text-sm">
+              <span className="font-semibold text-ink">
+                {selectedIds.size}
+              </span>{" "}
+              件選択中
+              <span className="text-ink-muted"> / {filtered.length} 件中</span>
+            </span>
+            <button
+              type="button"
+              onClick={selectAllVisible}
+              disabled={deleting}
+              className="rounded border border-ink-line bg-white px-3 py-1.5 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
+            >
+              全選択
+            </button>
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={deleting || selectedIds.size === 0}
+              className="rounded border border-ink-line bg-white px-3 py-1.5 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
+            >
+              選択解除
+            </button>
+            <button
+              type="button"
+              onClick={deleteSelected}
+              disabled={deleting || selectedIds.size === 0}
+              className="ml-auto inline-flex min-h-11 items-center gap-2 rounded bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:cursor-not-allowed disabled:bg-gray-300"
+            >
+              <Trash2 size={16} aria-hidden />
+              {deleting ? "削除中..." : `選択した依頼を削除 (${selectedIds.size})`}
+            </button>
+          </div>
+        </div>
+      )}
+      {deleteMode && <div className="h-20" aria-hidden />}
     </div>
   );
 }
@@ -188,13 +305,20 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
 function HistoryCard({
   order,
   itemMap,
+  deleteMode,
+  selected,
+  onToggle,
 }: {
   order: Order;
   itemMap: Map<number, Item>;
+  deleteMode: boolean;
+  selected: boolean;
+  onToggle: () => void;
 }) {
   const totalQty = order.lines.reduce((s, l) => s + l.quantity, 0);
-  return (
-    <li className="rounded-lg border border-ink-line bg-white p-3">
+
+  const inner = (
+    <>
       <div className="flex items-center justify-between gap-2">
         <div className="text-base font-semibold">{order.room}</div>
         <span
@@ -233,7 +357,46 @@ function HistoryCard({
       <div className="mt-2 text-right text-xs text-ink-muted">
         合計 {totalQty} 個
       </div>
-    </li>
+    </>
+  );
+
+  if (deleteMode) {
+    return (
+      <li>
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-pressed={selected}
+          className={[
+            "block w-full rounded-lg border-2 p-3 text-left transition",
+            selected
+              ? "border-red-500 bg-red-50"
+              : "border-ink-line bg-white hover:border-red-300",
+          ].join(" ")}
+        >
+          <div className="mb-2 flex items-center gap-2">
+            <span
+              className={[
+                "inline-flex h-5 w-5 items-center justify-center rounded border-2",
+                selected
+                  ? "border-red-600 bg-red-600 text-white"
+                  : "border-ink-line bg-white text-transparent",
+              ].join(" ")}
+            >
+              <Check size={14} aria-hidden />
+            </span>
+            <span className="text-xs text-ink-muted">
+              {selected ? "削除対象" : "タップで選択"}
+            </span>
+          </div>
+          {inner}
+        </button>
+      </li>
+    );
+  }
+
+  return (
+    <li className="rounded-lg border border-ink-line bg-white p-3">{inner}</li>
   );
 }
 
