@@ -21,7 +21,7 @@ export function Header() {
           <img
             src="/sapurink_image.png"
             alt="サプリンク"
-            className="h-9 w-auto sm:h-10"
+            className="h-11 w-auto sm:h-12"
           />
         </Link>
 
