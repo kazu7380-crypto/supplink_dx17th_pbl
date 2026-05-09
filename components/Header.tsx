@@ -16,10 +16,13 @@ export function Header() {
   return (
     <header className="sticky top-0 z-30 border-b border-ink-line bg-white">
       <div className="mx-auto flex h-14 max-w-6xl items-center gap-2 px-3 sm:gap-4 sm:px-4">
-        <Link href="/" className="shrink-0 flex items-baseline gap-2">
-          <span className="text-base font-semibold tracking-tight">
-            サプリンク
-          </span>
+        <Link href="/" className="shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/sapurink_image.png"
+            alt="サプリンク"
+            className="h-9 w-auto sm:h-10"
+          />
         </Link>
 
         <nav className="flex items-center gap-0.5 text-sm sm:gap-1">
