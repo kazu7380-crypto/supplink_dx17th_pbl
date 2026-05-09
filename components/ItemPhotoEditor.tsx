@@ -2,15 +2,16 @@
 
 import { useRef, useState } from "react";
 import { Camera, Trash2, Upload } from "lucide-react";
-import { useItemPhotoUrl } from "@/lib/useItemPhoto";
-import { compressImage, deletePhoto, savePhoto } from "@/lib/photoStore";
+import type { Item } from "@/lib/types";
+import { compressImage, deletePhoto, getPublicPhotoUrl, savePhoto } from "@/lib/photoStore";
 
-type Props = { code: number };
+type Props = { item: Pick<Item, "code" | "photoPath" | "updatedAt"> };
 
 const ACCEPT = "image/jpeg,image/jpg,image/png,.jpg,.jpeg,.png";
 
-export function ItemPhotoEditor({ code }: Props) {
-  const url = useItemPhotoUrl(code);
+export function ItemPhotoEditor({ item }: Props) {
+  const code = item.code;
+  const url = getPublicPhotoUrl(item);
   const fileRef = useRef<HTMLInputElement>(null);
   const cameraRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);

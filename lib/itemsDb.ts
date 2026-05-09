@@ -17,6 +17,7 @@ type DbRow = {
   memo: string | null;
   category: string | null;
   photo_path: string | null;
+  updated_at: string | null;
 };
 
 function rowToItem(row: DbRow): Item {
@@ -27,14 +28,19 @@ function rowToItem(row: DbRow): Item {
     shelf: row.shelf ?? "",
     memo: row.memo ?? "",
     category: row.category ?? undefined,
+    photoPath: row.photo_path ?? undefined,
+    updatedAt: row.updated_at ?? undefined,
   };
 }
+
+const SELECT_COLS =
+  "code, name, spec, shelf, memo, category, photo_path, updated_at";
 
 export async function listItems(): Promise<Item[]> {
   const sb = getSupabaseServer();
   const { data, error } = await sb
     .from("items")
-    .select("code, name, spec, shelf, memo, category, photo_path")
+    .select(SELECT_COLS)
     .order("code", { ascending: true });
   if (error) {
     console.error("[itemsDb.list]", error);
@@ -69,6 +75,20 @@ export async function listItemsOrFallback(): Promise<Item[]> {
 export async function replaceAllItems(items: Item[]): Promise<void> {
   const sb = getSupabaseServer();
 
+  // 既存の photo_path を保持するため、置換前に取得しておく。
+  // 同じコードの物品は写真の関連付けを引き継ぐ。
+  const { data: existing, error: fetchError } = await sb
+    .from("items")
+    .select("code, photo_path");
+  if (fetchError) {
+    console.error("[itemsDb.replaceAll/fetch-existing]", fetchError);
+    throw fetchError;
+  }
+  const photoByCode = new Map<number, string>();
+  for (const r of (existing ?? []) as { code: number; photo_path: string | null }[]) {
+    if (r.photo_path) photoByCode.set(r.code, r.photo_path);
+  }
+
   // Delete everything first. Use a non-null filter on `code` to satisfy
   // the "DELETE without WHERE" guard.
   const { error: delError } = await sb
@@ -89,6 +109,7 @@ export async function replaceAllItems(items: Item[]): Promise<void> {
     shelf: i.shelf ?? "",
     memo: i.memo ?? "",
     category: i.category ?? null,
+    photo_path: photoByCode.get(i.code) ?? null,
   }));
 
   const { error: insertError } = await sb.from("items").insert(rows);

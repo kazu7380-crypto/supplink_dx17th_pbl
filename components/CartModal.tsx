@@ -243,7 +243,7 @@ function CartLineRow({
 
   return (
     <li className="flex items-center gap-3 border-b border-ink-line p-3 last:border-b-0">
-      <ItemPhotoThumb code={item.code} size={48} />
+      <ItemPhotoThumb item={item} size={48} />
       <div className="min-w-0 flex-1">
         <div className="font-semibold">{item.name}</div>
         <div className="truncate text-sm text-ink-soft">{item.spec}</div>

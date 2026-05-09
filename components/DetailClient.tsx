@@ -190,7 +190,7 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                   <td className="px-3 py-2 text-ink-muted">{line.itemCode}</td>
                   <td className="px-3 py-2">
                     <div className={dim ? "opacity-50" : ""}>
-                      <ItemPhotoThumb code={line.itemCode} size={48} />
+                      <ItemPhotoThumb item={it} size={48} />
                     </div>
                   </td>
                   <td

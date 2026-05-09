@@ -144,7 +144,7 @@ export function SearchClient({ items: defaultItems }: Props) {
                       title="写真を拡大"
                       className="cursor-zoom-in rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
                     >
-                      <ItemPhotoThumb code={item.code} size={64} />
+                      <ItemPhotoThumb item={item} size={64} />
                     </button>
                     <div className="min-w-0">
                       {item.category && (

@@ -5,6 +5,10 @@ export type Item = {
   shelf: string;
   memo: string;
   category?: string;
+  /** Storage 内のオブジェクトキー（例: "100.jpg"）。未登録なら undefined */
+  photoPath?: string;
+  /** items.updated_at — 写真の URL のキャッシュバスタに利用 */
+  updatedAt?: string;
 };
 
 export type CartLine = {

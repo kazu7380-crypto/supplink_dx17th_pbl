@@ -1,71 +1,98 @@
 "use client";
 
-import { del, get, keys, set } from "idb-keyval";
+import { getSupabaseBrowser } from "./supabaseBrowser";
+import type { Item } from "./types";
 
 /**
- * Photo storage backed by IndexedDB (via idb-keyval).
+ * Item photo storage backed by Supabase Storage (bucket "item-photos")
+ * + items.photo_path column.
  *
- * Keys are derived from item codes. Values are stored as Blobs and
- * exposed to UI as object URLs (caller is responsible for revoking).
+ * Photos are stored as `<code>.jpg` and the path is recorded on the items
+ * row so any client can resolve a public URL synchronously.
  */
 
-function keyFor(code: number): string {
-  return `item-photo-${code}`;
+const BUCKET = "item-photos";
+
+function pathFor(code: number): string {
+  return `${code}.jpg`;
 }
 
+/**
+ * Upload (or overwrite) a photo for the given item code.
+ * 1. Compress / put the blob into Supabase Storage with upsert
+ * 2. Update items.photo_path so other clients see the new photo via Realtime
+ */
 export async function savePhoto(code: number, blob: Blob): Promise<void> {
-  await set(keyFor(code), blob);
-  notifyChanged(code);
-}
+  const sb = getSupabaseBrowser();
+  const path = pathFor(code);
 
-export async function loadPhotoBlob(code: number): Promise<Blob | null> {
-  const value = (await get(keyFor(code))) as Blob | undefined;
-  return value ?? null;
-}
-
-export async function deletePhoto(code: number): Promise<void> {
-  await del(keyFor(code));
-  notifyChanged(code);
-}
-
-export async function listPhotoCodes(): Promise<number[]> {
-  const allKeys = (await keys()) as IDBValidKey[];
-  const codes: number[] = [];
-  for (const k of allKeys) {
-    if (typeof k !== "string") continue;
-    const m = k.match(/^item-photo-(\d+)$/);
-    if (m) codes.push(Number(m[1]));
+  const { error: upErr } = await sb.storage.from(BUCKET).upload(path, blob, {
+    upsert: true,
+    contentType: "image/jpeg",
+    cacheControl: "60",
+  });
+  if (upErr) {
+    console.error("[photoStore.save/upload]", upErr);
+    throw upErr;
   }
-  return codes;
+
+  const { error: itemErr } = await sb
+    .from("items")
+    .update({ photo_path: path })
+    .eq("code", code);
+  if (itemErr) {
+    console.error("[photoStore.save/items-update]", itemErr);
+    throw itemErr;
+  }
 }
 
-const PHOTO_EVENT = "or-supply-photo-changed";
+/**
+ * Delete a photo. Storage failures (e.g. file not found) are swallowed
+ * to keep the items row in sync.
+ */
+export async function deletePhoto(code: number): Promise<void> {
+  const sb = getSupabaseBrowser();
+  const path = pathFor(code);
 
-function notifyChanged(code: number) {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(new CustomEvent(PHOTO_EVENT, { detail: { code } }));
+  const { error: rmErr } = await sb.storage.from(BUCKET).remove([path]);
+  if (rmErr) console.warn("[photoStore.delete/storage]", rmErr);
+
+  const { error: itemErr } = await sb
+    .from("items")
+    .update({ photo_path: null })
+    .eq("code", code);
+  if (itemErr) {
+    console.error("[photoStore.delete/items-update]", itemErr);
+    throw itemErr;
+  }
 }
 
-export function subscribePhotoChanged(
-  handler: (code: number) => void,
-): () => void {
-  if (typeof window === "undefined") return () => {};
-  const onCustom = (e: Event) => {
-    const detail = (e as CustomEvent<{ code: number }>).detail;
-    if (detail) handler(detail.code);
-  };
-  window.addEventListener(PHOTO_EVENT, onCustom);
-  return () => window.removeEventListener(PHOTO_EVENT, onCustom);
+/**
+ * Build a public URL for an item's photo. Returns null if no photo is
+ * registered. Includes a cache-buster derived from items.updated_at so
+ * subsequent re-uploads bust the CDN cache.
+ */
+export function getPublicPhotoUrl(
+  item: Pick<Item, "photoPath" | "updatedAt"> | null | undefined,
+): string | null {
+  if (!item || !item.photoPath) return null;
+  let publicUrl: string | undefined;
+  try {
+    const sb = getSupabaseBrowser();
+    publicUrl = sb.storage.from(BUCKET).getPublicUrl(item.photoPath).data
+      ?.publicUrl;
+  } catch {
+    return null;
+  }
+  if (!publicUrl) return null;
+  const v = item.updatedAt ? `?v=${encodeURIComponent(item.updatedAt)}` : "";
+  return `${publicUrl}${v}`;
 }
 
 /**
  * Compress an image File/Blob to fit under `targetBytes` (default ~80KB).
- *
- * Tries a series of (max-dimension, JPEG quality) combinations from
- * highest to lowest and returns the first that meets the target.
- * If none meet the target, returns the smallest result obtained.
- *
- * Aspect ratio is preserved. Output is always JPEG for compactness.
+ * Tries (max-dimension, JPEG quality) combinations from highest to lowest
+ * and returns the first that meets the target.
  */
 export async function compressImage(
   source: Blob,
@@ -77,14 +104,14 @@ export async function compressImage(
 
     const attempts: Array<{ dim: number; quality: number }> = [
       { dim: 1024, quality: 0.7 },
-      { dim: 800,  quality: 0.7 },
-      { dim: 800,  quality: 0.6 },
-      { dim: 640,  quality: 0.65 },
-      { dim: 640,  quality: 0.55 },
-      { dim: 512,  quality: 0.6 },
-      { dim: 512,  quality: 0.5 },
-      { dim: 400,  quality: 0.55 },
-      { dim: 400,  quality: 0.45 },
+      { dim: 800, quality: 0.7 },
+      { dim: 800, quality: 0.6 },
+      { dim: 640, quality: 0.65 },
+      { dim: 640, quality: 0.55 },
+      { dim: 512, quality: 0.6 },
+      { dim: 512, quality: 0.5 },
+      { dim: 400, quality: 0.55 },
+      { dim: 400, quality: 0.45 },
     ];
 
     let best: Blob | null = null;
@@ -93,7 +120,6 @@ export async function compressImage(
       if (blob.size <= targetBytes) return blob;
       if (!best || blob.size < best.size) best = blob;
     }
-    // 目標未達でも一番小さいものを返す（元画像にフォールバック）
     return best ?? source;
   } finally {
     URL.revokeObjectURL(url);
@@ -116,7 +142,8 @@ async function renderJpeg(
   ctx.drawImage(img, 0, 0, w, h);
   return await new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
-      (b) => (b ? resolve(b) : reject(new Error("canvas.toBlob returned null"))),
+      (b) =>
+        b ? resolve(b) : reject(new Error("canvas.toBlob returned null")),
       "image/jpeg",
       quality,
     );

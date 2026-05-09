@@ -16,7 +16,8 @@ type Preview = {
   warnings: string[];
 };
 
-const FIELD_ALIASES: Record<keyof Item, string[]> = {
+type CsvField = "code" | "name" | "spec" | "shelf" | "memo" | "category";
+const FIELD_ALIASES: Record<CsvField, string[]> = {
   code: ["物品コード", "コード", "code"],
   name: ["材料名", "品名", "名前", "name"],
   spec: ["製品番号", "製品記号", "規格", "spec"],
@@ -313,7 +314,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
                         )}
                       </td>
                       <td className="px-2 py-2">
-                        <ItemPhotoThumb code={it.code} size={40} />
+                        <ItemPhotoThumb item={it} size={40} />
                       </td>
                       <td className="px-2 py-2 tabular-nums">{it.code}</td>
                       <td className="px-2 py-2">
@@ -331,7 +332,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
                             <ImageIcon size={14} aria-hidden /> 写真の登録 / 変更
                           </div>
                           <div className="mt-2">
-                            <ItemPhotoEditor code={it.code} />
+                            <ItemPhotoEditor item={it} />
                           </div>
                         </td>
                       </tr>

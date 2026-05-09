@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { ImageOff, X } from "lucide-react";
 import type { Item } from "@/lib/types";
-import { useItemPhotoUrl } from "@/lib/useItemPhoto";
+import { getPublicPhotoUrl } from "@/lib/photoStore";
 
 type Props = {
   item: Item;
@@ -11,7 +11,7 @@ type Props = {
 };
 
 export function PhotoLightbox({ item, onClose }: Props) {
-  const url = useItemPhotoUrl(item.code);
+  const url = getPublicPhotoUrl(item);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

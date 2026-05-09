@@ -12,6 +12,7 @@ type DbRow = {
   memo: string | null;
   category: string | null;
   photo_path: string | null;
+  updated_at: string | null;
 };
 
 function rowToItem(row: DbRow): Item {
@@ -22,6 +23,8 @@ function rowToItem(row: DbRow): Item {
     shelf: row.shelf ?? "",
     memo: row.memo ?? "",
     category: row.category ?? undefined,
+    photoPath: row.photo_path ?? undefined,
+    updatedAt: row.updated_at ?? undefined,
   };
 }
 
@@ -29,7 +32,9 @@ async function fetchItems(): Promise<Item[]> {
   const sb = getSupabaseBrowser();
   const { data, error } = await sb
     .from("items")
-    .select("code, name, spec, shelf, memo, category, photo_path")
+    .select(
+      "code, name, spec, shelf, memo, category, photo_path, updated_at",
+    )
     .order("code", { ascending: true });
   if (error) {
     console.error("[useItems.fetch]", error);
