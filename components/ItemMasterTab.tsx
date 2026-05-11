@@ -8,7 +8,6 @@ import { downloadCsv, timestampForFilename } from "@/lib/csv";
 import { useItems } from "@/lib/useItems";
 import { ItemPhotoEditor } from "./ItemPhotoEditor";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
-import { PhotoBatchImport } from "./PhotoBatchImport";
 
 type Props = { defaultItems: Item[] };
 
@@ -274,13 +273,6 @@ export function ItemMasterTab({ defaultItems }: Props) {
             </div>
           </div>
         )}
-      </Section>
-
-      <Section
-        title="写真の一括取り込み"
-        description="ファイル名が物品コードに対応した画像をまとめて登録します（例: 100.jpg → コード 100）。"
-      >
-        <PhotoBatchImport items={items} />
       </Section>
 
       <Section title={`物品一覧 (${items.length} 件)`} description="行をタップすると写真の登録 / 変更とメモの編集ができます。">
