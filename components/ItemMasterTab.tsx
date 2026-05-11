@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { AlertCircle, ChevronDown, ChevronRight, Image as ImageIcon, RotateCcw, Upload } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronRight, Download, Image as ImageIcon, RotateCcw, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { Item } from "@/lib/types";
+import { downloadCsv, timestampForFilename } from "@/lib/csv";
 import { useItems } from "@/lib/useItems";
 import { ItemPhotoEditor } from "./ItemPhotoEditor";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
@@ -117,6 +118,23 @@ export function ItemMasterTab({ defaultItems }: Props) {
     setSaveError(null);
   };
 
+  const exportCsv = () => {
+    const sorted = [...items].sort((a, b) => a.code - b.code);
+    const rows = sorted.map((it) => [
+      it.code,
+      it.name,
+      it.spec,
+      it.shelf,
+      it.memo,
+      it.category ?? "",
+    ]);
+    downloadCsv(
+      `items-master-${timestampForFilename()}.csv`,
+      ["物品コード", "材料名", "製品番号", "棚番", "メモ", "カテゴリ"],
+      rows,
+    );
+  };
+
   const resetToDefault = async () => {
     if (typeof window === "undefined") return;
     if (
@@ -146,7 +164,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
 
   return (
     <div>
-      <Section title="インポート" description="CSV / TSV / Excel を読み込んで物品マスタを更新します。データはサーバ（Supabase）に保存され、全端末で共有されます。列の見出しは「物品コード / 材料名 / 製品番号 / 棚番 / メモ / カテゴリ」を想定しています。">
+      <Section title="インポート / エクスポート" description="CSV / TSV / Excel を読み込んで物品マスタを更新します。データはサーバ（Supabase）に保存され、全端末で共有されます。列の見出しは「物品コード / 材料名 / 製品番号 / 棚番 / メモ / カテゴリ」を想定しています。「CSV エクスポート」では現在のマスタを同じ列順で書き出します（UTF-8 BOM 付き）。">
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
             <Upload size={16} aria-hidden /> ファイルを選択
@@ -158,6 +176,14 @@ export function ItemMasterTab({ defaultItems }: Props) {
               onChange={onFileChange}
             />
           </label>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={items.length === 0}
+            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
+          >
+            <Download size={14} aria-hidden /> CSV エクスポート
+          </button>
           <button
             type="button"
             onClick={resetToDefault}

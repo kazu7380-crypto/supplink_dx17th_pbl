@@ -14,6 +14,14 @@ module.exports = {
           line: "#e5e7eb",
         },
       },
+      fontFamily: {
+        brand: [
+          '"Kaisei Opti"',
+          '"Hiragino Mincho ProN"',
+          '"Yu Mincho"',
+          "serif",
+        ],
+      },
     },
   },
   plugins: [],

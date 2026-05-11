@@ -367,11 +367,15 @@ function CartLineRow({
       <div className="flex items-start gap-3">
         <ItemPhotoThumb item={item} size={56} />
         <div className="min-w-0 flex-1">
-          <div className="font-semibold leading-tight">{item.name}</div>
+          <div className="font-semibold leading-tight">
+            <span className="mr-1.5 align-baseline text-xs font-normal tabular-nums text-ink-muted">
+              #{item.code}
+            </span>
+            {item.name}
+          </div>
           <div className="truncate text-sm text-ink-soft">{item.spec}</div>
           <div className="mt-0.5 text-xs">
             <span className="font-bold text-ink">{item.shelf}</span>
-            <span className="ml-2 text-ink-muted">#{item.code}</span>
           </div>
         </div>
       </div>

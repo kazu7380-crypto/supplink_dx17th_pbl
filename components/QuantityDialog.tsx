@@ -67,7 +67,12 @@ export function QuantityDialog({
           <div className="flex min-w-0 items-start gap-3">
             <ItemPhotoThumb item={item} size={64} />
             <div className="min-w-0">
-              <div className="text-base font-semibold">{item.name}</div>
+              <div className="text-base font-semibold">
+                <span className="mr-1.5 align-baseline text-xs font-normal tabular-nums text-ink-muted">
+                  #{item.code}
+                </span>
+                {item.name}
+              </div>
               <div className="text-sm text-ink-soft">{item.spec}</div>
               <div className="mt-1 text-xs text-ink-muted">{item.shelf}</div>
               {isUpdate && (
