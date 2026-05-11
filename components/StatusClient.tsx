@@ -365,9 +365,13 @@ function OrderCard({
         {order.lines.slice(0, 3).map((l) => {
           const it = lineDisplayItem(l, itemMap);
           return (
-            <li key={l.itemCode} className="truncate">
-              {`${it.name} ${it.spec}`.trim()}
-              <span className="ml-1 text-ink-muted">× {l.quantity}</span>
+            <li key={l.itemCode} className="flex items-baseline gap-2">
+              <span className="min-w-0 flex-1 truncate">
+                {`${it.name} ${it.spec}`.trim()}
+              </span>
+              <span className="shrink-0 tabular-nums text-ink-muted">
+                × {l.quantity}
+              </span>
             </li>
           );
         })}
