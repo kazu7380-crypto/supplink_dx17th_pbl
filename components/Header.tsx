@@ -24,7 +24,7 @@ export function Header() {
             aria-hidden
             className="h-11 w-auto sm:h-12"
           />
-          <span className="font-brand text-lg font-bold tracking-tight sm:text-xl">
+          <span className="font-brand text-lg font-extrabold tracking-tight sm:text-xl">
             サプリンク
           </span>
         </Link>
