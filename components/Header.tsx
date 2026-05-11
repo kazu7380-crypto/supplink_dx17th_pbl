@@ -24,8 +24,8 @@ export function Header() {
             aria-hidden
             className="h-11 w-auto sm:h-12"
           />
-          <span className="text-lg font-semibold tracking-tight sm:text-xl">
-            Kaisei Opti
+          <span className="font-brand text-lg font-bold tracking-tight sm:text-xl">
+            サプリンク
           </span>
         </Link>
 
