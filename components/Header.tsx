@@ -25,7 +25,7 @@ export function Header() {
             className="h-11 w-auto sm:h-12"
           />
           <span className="text-lg font-semibold tracking-tight sm:text-xl">
-            サプリンク
+            Kaisei Opti
           </span>
         </Link>
 
