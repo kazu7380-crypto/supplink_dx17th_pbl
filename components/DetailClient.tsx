@@ -220,11 +220,6 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                       >
                         {it.spec}
                       </div>
-                      {it.memo && (
-                        <div className="mt-0.5 text-xs text-ink-muted">
-                          メモ: {it.memo}
-                        </div>
-                      )}
                     </div>
                     <div className="shrink-0 text-right">
                       <div className="text-lg font-semibold tabular-nums leading-none">
@@ -232,18 +227,20 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                       </div>
                     </div>
                   </div>
+                  <div className="mt-1 flex items-end justify-between gap-2">
+                    <span className="min-w-0 truncate text-xs text-ink-muted">
+                      {it.memo ? `メモ: ${it.memo}` : ""}
+                    </span>
+                    <span
+                      className={[
+                        "shrink-0 text-3xl font-bold leading-none",
+                        dim ? "text-ink-muted" : "text-ink",
+                      ].join(" ")}
+                    >
+                      {it.shelf || "棚?"}
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              <div className="mt-2 flex justify-end">
-                <span
-                  className={[
-                    "text-3xl font-bold leading-none",
-                    dim ? "text-ink-muted" : "text-ink",
-                  ].join(" ")}
-                >
-                  {it.shelf || "棚?"}
-                </span>
               </div>
 
               {showCheckbox && (
