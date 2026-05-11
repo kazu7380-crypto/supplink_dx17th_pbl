@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { AlertCircle, ChevronDown, ChevronRight, Download, Image as ImageIcon, RotateCcw, Upload } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, ChevronDown, ChevronRight, Download, Image as ImageIcon, Pencil, RotateCcw, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { Item } from "@/lib/types";
 import { downloadCsv, timestampForFilename } from "@/lib/csv";
@@ -283,7 +283,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
         <PhotoBatchImport items={items} />
       </Section>
 
-      <Section title={`物品一覧 (${items.length} 件)`} description="行をタップすると写真を登録できます。">
+      <Section title={`物品一覧 (${items.length} 件)`} description="行をタップすると写真の登録 / 変更とメモの編集ができます。">
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
           <input
             type="text"
@@ -357,12 +357,22 @@ export function ItemMasterTab({ defaultItems }: Props) {
                   </div>
                 </button>
                 {open && (
-                  <div className="border-t border-ink-line bg-gray-50 p-3">
-                    <div className="flex items-center gap-2 text-xs text-ink-soft">
-                      <ImageIcon size={14} aria-hidden /> 写真の登録 / 変更
+                  <div className="space-y-4 border-t border-ink-line bg-gray-50 p-3">
+                    <div>
+                      <div className="flex items-center gap-2 text-xs text-ink-soft">
+                        <ImageIcon size={14} aria-hidden /> 写真の登録 / 変更
+                      </div>
+                      <div className="mt-2">
+                        <ItemPhotoEditor item={it} />
+                      </div>
                     </div>
-                    <div className="mt-2">
-                      <ItemPhotoEditor item={it} />
+                    <div>
+                      <div className="flex items-center gap-2 text-xs text-ink-soft">
+                        <Pencil size={14} aria-hidden /> メモの編集
+                      </div>
+                      <div className="mt-2">
+                        <MemoEditor item={it} />
+                      </div>
                     </div>
                   </div>
                 )}
@@ -467,4 +477,100 @@ function toCode(value: unknown): number | null {
     if (Number.isFinite(n)) return Math.trunc(n);
   }
   return null;
+}
+
+const MEMO_MAX_LEN = 500;
+
+function MemoEditor({ item }: { item: Item }) {
+  const [draft, setDraft] = useState(item.memo ?? "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [flash, setFlash] = useState<string | null>(null);
+
+  // 外部（他端末・他タブの編集）で memo が変わったらドラフトも追従する。
+  // 編集中に上書きされる可能性はあるが、本アプリの想定では同時編集は稀。
+  useEffect(() => {
+    setDraft(item.memo ?? "");
+  }, [item.memo, item.code]);
+
+  const trimmed = draft.replace(/\s+$/g, "");
+  const dirty = trimmed !== (item.memo ?? "");
+
+  const save = async () => {
+    if (!dirty || saving) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/items/${item.code}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ memo: trimmed }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(
+          typeof body?.error === "string" ? body.error : "保存に失敗しました",
+        );
+      }
+      setFlash("メモを更新しました");
+      window.setTimeout(() => setFlash(null), 2500);
+    } catch (e) {
+      console.error(e);
+      setError(e instanceof Error ? e.message : "保存に失敗しました");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const reset = () => {
+    setDraft(item.memo ?? "");
+    setError(null);
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        maxLength={MEMO_MAX_LEN}
+        rows={2}
+        placeholder="メモなし"
+        className="w-full resize-y rounded border border-ink-line bg-white px-3 py-2 text-sm focus:border-ink focus:outline-none"
+      />
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-[11px] text-ink-muted tabular-nums">
+          {draft.length} / {MEMO_MAX_LEN}
+        </span>
+        <div className="flex items-center gap-2">
+          {flash && (
+            <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-800">
+              {flash}
+            </span>
+          )}
+          {dirty && !saving && (
+            <button
+              type="button"
+              onClick={reset}
+              className="rounded border border-ink-line bg-white px-3 py-1 text-xs text-ink-soft hover:bg-gray-50"
+            >
+              変更を破棄
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={save}
+            disabled={!dirty || saving}
+            className="rounded bg-ink px-3 py-1 text-xs font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:bg-gray-300"
+          >
+            {saving ? "保存中..." : "メモを保存"}
+          </button>
+        </div>
+      </div>
+      {error && (
+        <div className="inline-flex items-center gap-2 rounded border border-red-300 bg-red-50 px-2 py-1 text-xs text-red-800">
+          <AlertCircle size={12} aria-hidden /> {error}
+        </div>
+      )}
+    </div>
+  );
 }
