@@ -207,6 +207,9 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                           dim ? "text-ink-muted line-through" : "",
                         ].join(" ")}
                       >
+                        <span className="mr-1.5 align-baseline text-xs font-normal tabular-nums text-ink-muted">
+                          #{line.itemCode}
+                        </span>
                         {it.name}
                       </div>
                       <div
@@ -216,9 +219,6 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                         ].join(" ")}
                       >
                         {it.spec}
-                      </div>
-                      <div className="mt-1 text-xs text-ink-muted">
-                        #{line.itemCode}
                       </div>
                       {it.memo && (
                         <div className="mt-0.5 text-xs text-ink-muted">
