@@ -68,6 +68,32 @@ export async function listItemsOrFallback(): Promise<Item[]> {
 }
 
 /**
+ * Update a single item's mutable fields (currently only `memo`).
+ * Returns the updated row, or null if no row matched the code.
+ */
+export async function updateItem(
+  code: number,
+  patch: { memo?: string },
+): Promise<Item | null> {
+  const sb = getSupabaseServer();
+  const dbPatch: Record<string, unknown> = {};
+  if (patch.memo !== undefined) dbPatch.memo = patch.memo;
+  if (Object.keys(dbPatch).length === 0) return null;
+  const { data, error } = await sb
+    .from("items")
+    .update(dbPatch)
+    .eq("code", code)
+    .select(SELECT_COLS)
+    .maybeSingle();
+  if (error) {
+    console.error("[itemsDb.update]", error);
+    throw error;
+  }
+  if (!data) return null;
+  return rowToItem(data as DbRow);
+}
+
+/**
  * Replace the entire item master atomically (delete-all then bulk insert).
  *
  * `items.length === 0` is treated as "wipe all", which is allowed.
