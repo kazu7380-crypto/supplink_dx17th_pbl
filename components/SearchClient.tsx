@@ -132,57 +132,59 @@ export function SearchClient({ items: defaultItems }: Props) {
                     className="absolute left-0 top-3 h-6 w-1 rounded-r bg-ink"
                   />
                 )}
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex min-w-0 items-start gap-2">
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setZoom(item);
-                      }}
-                      aria-label={`${item.name} の写真を拡大`}
-                      title="写真を拡大"
-                      className="cursor-zoom-in rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
-                    >
-                      <ItemPhotoThumb item={item} size={64} />
-                    </button>
-                    <div className="min-w-0">
-                      {item.category && (
-                        <div className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
-                          {item.category}
+                <div className="flex items-start gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setZoom(item);
+                    }}
+                    aria-label={`${item.name} の写真を拡大`}
+                    title="写真を拡大"
+                    className="shrink-0 cursor-zoom-in rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+                  >
+                    <ItemPhotoThumb item={item} size={64} />
+                  </button>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        {item.category && (
+                          <div className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
+                            {item.category}
+                          </div>
+                        )}
+                        <div className="text-base font-semibold leading-tight">
+                          <span className="mr-1.5 align-baseline text-xs font-normal tabular-nums text-ink-muted">
+                            #{item.code}
+                          </span>
+                          {item.name}
                         </div>
-                      )}
-                      <div className="text-base font-semibold leading-tight">
-                        <span className="mr-1.5 align-baseline text-xs font-normal tabular-nums text-ink-muted">
-                          #{item.code}
+                        <div className="truncate text-sm text-ink-soft">
+                          {item.spec}
+                        </div>
+                      </div>
+                      {inCart ? (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded bg-ink px-2 py-1 text-xs font-semibold text-white">
+                          <Check size={14} aria-hidden />
+                          カート {inCartQty}
                         </span>
-                        {item.name}
-                      </div>
-                      <div className="truncate text-sm text-ink-soft">
-                        {item.spec}
-                      </div>
+                      ) : (
+                        <span className="inline-flex shrink-0 items-center gap-1 rounded border border-ink-line bg-white px-2 py-1 text-xs text-ink-soft group-hover:border-ink group-hover:bg-ink group-hover:text-white">
+                          <Plus size={14} aria-hidden /> 追加
+                        </span>
+                      )}
+                    </div>
+                    <div className="mt-1 flex items-end justify-between gap-2">
+                      <span className="min-w-0 truncate text-xs text-ink-muted">
+                        {item.memo ? `メモ: ${item.memo}` : ""}
+                      </span>
+                      {item.shelf && (
+                        <span className="shrink-0 text-2xl font-bold leading-none text-ink">
+                          {item.shelf}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  {inCart ? (
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded bg-ink px-2 py-1 text-xs font-semibold text-white">
-                      <Check size={14} aria-hidden />
-                      カート {inCartQty}
-                    </span>
-                  ) : (
-                    <span className="inline-flex shrink-0 items-center gap-1 rounded border border-ink-line bg-white px-2 py-1 text-xs text-ink-soft group-hover:border-ink group-hover:bg-ink group-hover:text-white">
-                      <Plus size={14} aria-hidden /> 追加
-                    </span>
-                  )}
-                </div>
-                <div className="mt-2 flex items-end justify-between gap-2">
-                  <span className="min-w-0 truncate text-xs text-ink-muted">
-                    {item.memo ? `メモ: ${item.memo}` : ""}
-                  </span>
-                  {item.shelf && (
-                    <span className="shrink-0 text-2xl font-bold leading-none text-ink">
-                      {item.shelf}
-                    </span>
-                  )}
                 </div>
               </div>
             </li>
