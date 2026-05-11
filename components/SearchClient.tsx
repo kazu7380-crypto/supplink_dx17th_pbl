@@ -37,11 +37,23 @@ export function SearchClient({ items: defaultItems }: Props) {
   }, [items]);
 
   const filtered = useMemo(() => {
-    return items.filter((i) => {
+    const result = items.filter((i) => {
       if (category && (i.category ?? "") !== category) return false;
       if (!query.trim()) return true;
       return matches(query, i.name, i.spec, i.shelf, i.memo, String(i.code));
     });
+    // クエリが数字のみで、同じコードの物品が結果に含まれていれば先頭に並べ替える。
+    // 件数は変わらず、目当て 1 件が最上段に来るだけ。
+    const q = query.trim();
+    if (q && /^\d+$/.test(q)) {
+      const codeQ = Number(q);
+      const idx = result.findIndex((i) => i.code === codeQ);
+      if (idx > 0) {
+        const [hit] = result.splice(idx, 1);
+        result.unshift(hit);
+      }
+    }
+    return result;
   }, [items, query, category]);
 
   return (
