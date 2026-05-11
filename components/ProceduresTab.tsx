@@ -1,8 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { AlertCircle, RotateCcw, Upload } from "lucide-react";
+import { AlertCircle, Download, RotateCcw, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
+import { downloadCsv, timestampForFilename } from "@/lib/csv";
 import { useProcedures } from "@/lib/useProcedures";
 
 type Preview = {
@@ -104,6 +105,19 @@ export function ProceduresTab() {
     setSaveError(null);
   };
 
+  const exportCsv = () => {
+    const sorted = [...procedures].sort((a, b) => {
+      const d = a.department.localeCompare(b.department, "ja");
+      return d !== 0 ? d : a.name.localeCompare(b.name, "ja");
+    });
+    const rows = sorted.map((p) => [p.department, p.name]);
+    downloadCsv(
+      `procedures-master-${timestampForFilename()}.csv`,
+      ["診療科", "術式"],
+      rows,
+    );
+  };
+
   const resetMaster = async () => {
     if (typeof window === "undefined") return;
     if (
@@ -134,8 +148,8 @@ export function ProceduresTab() {
   return (
     <div>
       <Section
-        title="インポート"
-        description="A 列「診療科」、B 列「術式」の CSV / TSV / Excel を読み込みます。データはサーバ（Supabase）に保存され、全端末で共有されます。"
+        title="インポート / エクスポート"
+        description="A 列「診療科」、B 列「術式」の CSV / TSV / Excel を読み込みます。データはサーバ（Supabase）に保存され、全端末で共有されます。「CSV エクスポート」で現在のマスタを同じ列順で書き出します（UTF-8 BOM 付き）。"
       >
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
@@ -148,6 +162,14 @@ export function ProceduresTab() {
               onChange={onFileChange}
             />
           </label>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={procedures.length === 0}
+            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
+          >
+            <Download size={14} aria-hidden /> CSV エクスポート
+          </button>
           <button
             type="button"
             onClick={resetMaster}
