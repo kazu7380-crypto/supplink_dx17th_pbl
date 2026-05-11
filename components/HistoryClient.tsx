@@ -356,7 +356,7 @@ function HistoryCard({
           <div>配送完了: {formatDateTime(order.deliveredAt)}</div>
         )}
       </div>
-      <ul className="mt-2 space-y-0.5 border-t border-ink-line pt-2 text-sm">
+      <ul className="mt-2 list-disc space-y-0.5 border-t border-ink-line pl-5 pt-2 text-sm marker:text-ink-muted">
         {order.lines.map((l) => {
           const it = lineDisplayItem(l, itemMap);
           return (

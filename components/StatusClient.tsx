@@ -361,7 +361,7 @@ function OrderCard({
       <div className="mt-1 text-xs text-ink-muted">
         {formatTime(order.createdAt)} · {order.lines.length} 種 / {totalQty} 個
       </div>
-      <ul className="mt-2 space-y-0.5 text-sm">
+      <ul className="mt-2 list-disc space-y-0.5 pl-5 text-sm marker:text-ink-muted">
         {order.lines.slice(0, 3).map((l) => {
           const it = lineDisplayItem(l, itemMap);
           return (
@@ -371,12 +371,12 @@ function OrderCard({
             </li>
           );
         })}
-        {order.lines.length > 3 && (
-          <li className="text-xs text-ink-muted">
-            ほか {order.lines.length - 3} 件
-          </li>
-        )}
       </ul>
+      {order.lines.length > 3 && (
+        <p className="mt-1 text-xs text-ink-muted">
+          ほか {order.lines.length - 3} 件
+        </p>
+      )}
     </Link>
   );
 }
