@@ -154,7 +154,7 @@ export function ProceduresTab() {
       >
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
-            <Upload size={16} aria-hidden /> ファイルを選択
+            <Upload size={16} aria-hidden /> ファイルインポート
             <input
               ref={fileRef}
               type="file"
@@ -335,7 +335,7 @@ function Section({
     <section className="mb-6">
       <h2 className="mb-1 text-sm font-semibold text-ink">{title}</h2>
       {description && (
-        <p className="mb-3 text-xs text-ink-muted">{description}</p>
+        <p className="mb-3 text-xs text-ink-soft">{description}</p>
       )}
       {children}
     </section>

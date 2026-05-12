@@ -166,7 +166,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
       <Section title="インポート / エクスポート" description="CSV / TSV / Excel を読み込んで物品マスタを更新します。データはサーバ（Supabase）に保存され、全端末で共有されます。列の見出しは「物品コード / 材料名 / 製品番号 / 棚番 / メモ / カテゴリ」を想定しています。「CSV エクスポート」では現在のマスタを同じ列順で書き出します（UTF-8 BOM 付き）。">
         <div className="flex flex-wrap items-center gap-2">
           <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
-            <Upload size={16} aria-hidden /> ファイルを選択
+            <Upload size={16} aria-hidden /> ファイルインポート
             <input
               ref={fileRef}
               type="file"
@@ -321,11 +321,10 @@ export function ItemMasterTab({ defaultItems }: Props) {
                     <ItemPhotoThumb item={it} size={56} />
                   </div>
                   <div className="min-w-0 flex-1">
-                    {it.category && (
-                      <div className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
-                        {it.category}
-                      </div>
-                    )}
+                    <div className="flex items-baseline justify-between gap-2 text-[11px] font-medium tracking-wide text-ink-muted">
+                      <span className="truncate uppercase">{it.category ?? ""}</span>
+                      <span className="shrink-0 tabular-nums">#{it.code}</span>
+                    </div>
                     <div className="text-sm font-semibold leading-tight">
                       {it.name}
                     </div>
@@ -334,7 +333,6 @@ export function ItemMasterTab({ defaultItems }: Props) {
                     </div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs">
                       <span className="font-bold text-ink">{it.shelf}</span>
-                      <span className="text-ink-muted">#{it.code}</span>
                       {it.memo && (
                         <span className="text-ink-muted">メモ: {it.memo}</span>
                       )}
@@ -395,7 +393,7 @@ function Section({
     <section className="mb-6">
       <h2 className="mb-1 text-sm font-semibold text-ink">{title}</h2>
       {description && (
-        <p className="mb-3 text-xs text-ink-muted">{description}</p>
+        <p className="mb-3 text-xs text-ink-soft">{description}</p>
       )}
       {children}
     </section>
