@@ -9,6 +9,7 @@ import { ORDER_STATUS_LABEL, lineDisplayItem, nextOrderStatus } from "@/lib/type
 import { useItems } from "@/lib/useItems";
 import { clearChecks, loadChecks, saveChecks } from "@/lib/pickingChecksStore";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
+import { PhotoLightbox } from "./PhotoLightbox";
 
 type Props = { items: Item[]; order: Order };
 
@@ -24,6 +25,7 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
   const [order, setOrder] = useState<Order>(initialOrder);
   const [busy, setBusy] = useState(false);
   const [checked, setChecked] = useState<Set<number>>(new Set());
+  const [zoom, setZoom] = useState<Item | null>(null);
 
   const itemMap = new Map(items.map((i) => [i.code, i]));
   const totalQty = order.lines.reduce((s, l) => s + l.quantity, 0);
@@ -160,9 +162,18 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
               ].join(" ")}
             >
               <div className="flex items-start gap-3">
-                <div className={dim ? "shrink-0 opacity-50" : "shrink-0"}>
+                <button
+                  type="button"
+                  onClick={() => setZoom(it)}
+                  aria-label={`${it.name} の写真を拡大`}
+                  title="写真を拡大"
+                  className={[
+                    "shrink-0 cursor-zoom-in rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink",
+                    dim ? "opacity-50" : "",
+                  ].join(" ")}
+                >
                   <ItemPhotoThumb item={it} size={64} />
-                </div>
+                </button>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
@@ -250,6 +261,8 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
           </div>
         </div>
       )}
+
+      {zoom && <PhotoLightbox item={zoom} onClose={() => setZoom(null)} />}
     </div>
   );
 }
