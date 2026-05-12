@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { X, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, X } from "lucide-react";
 import type { Item } from "@/lib/types";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
 import { PhotoLightbox } from "./PhotoLightbox";
@@ -42,6 +42,12 @@ export function QuantityDialog({
   const qty = value === "" ? 0 : Number(value);
   const isNumeric = /^[0-9]*$/.test(value) && qty >= 0 && qty <= 9999;
   const canCommit = isNumeric && qty > 0;
+
+  const stepValue = (delta: number) => {
+    const current = Number(value) || 0;
+    const next = Math.max(0, Math.min(9999, current + delta));
+    setValue(String(next));
+  };
 
   const submit = () => {
     if (!canCommit) return;
@@ -102,42 +108,60 @@ export function QuantityDialog({
         </div>
 
         <label className="mt-5 block text-sm font-medium">数量（個）</label>
-        <div className="relative mt-1">
-          <input
-            ref={inputRef}
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            autoComplete="off"
-            value={value}
-            onChange={(e) => {
-              const next = e.target.value.replace(/[^0-9]/g, "");
-              setValue(next);
-            }}
-            onFocus={(e) => e.currentTarget.select()}
-            onClick={(e) => e.currentTarget.select()}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                submit();
-              }
-            }}
-            className="w-full rounded border border-ink-line bg-white py-2 pl-3 pr-10 text-lg tabular-nums focus:border-ink focus:outline-none"
-          />
-          {value && (
-            <button
-              type="button"
-              aria-label="入力をクリア"
-              title="入力をクリア"
-              onClick={() => {
-                setValue("");
-                inputRef.current?.focus();
+        <div className="mt-1 flex items-center gap-2">
+          <button
+            type="button"
+            aria-label="数量を1減らす"
+            onClick={() => stepValue(-1)}
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded border border-ink-line bg-white hover:bg-gray-50"
+          >
+            <Minus size={20} aria-hidden />
+          </button>
+          <div className="relative flex-1">
+            <input
+              ref={inputRef}
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              autoComplete="off"
+              value={value}
+              onChange={(e) => {
+                const next = e.target.value.replace(/[^0-9]/g, "");
+                setValue(next);
               }}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1.5 text-ink-muted hover:bg-gray-100"
-            >
-              <X size={16} />
-            </button>
-          )}
+              onFocus={(e) => e.currentTarget.select()}
+              onClick={(e) => e.currentTarget.select()}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submit();
+                }
+              }}
+              className="h-12 w-full rounded border border-ink-line bg-white pl-3 pr-9 text-center text-lg tabular-nums focus:border-ink focus:outline-none"
+            />
+            {value && (
+              <button
+                type="button"
+                aria-label="入力をクリア"
+                title="入力をクリア"
+                onClick={() => {
+                  setValue("");
+                  inputRef.current?.focus();
+                }}
+                className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-1 text-ink-muted hover:bg-gray-100"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            aria-label="数量を1増やす"
+            onClick={() => stepValue(1)}
+            className="inline-flex h-12 w-12 shrink-0 items-center justify-center rounded border border-ink-line bg-white hover:bg-gray-50"
+          >
+            <Plus size={20} aria-hidden />
+          </button>
         </div>
         <p className="mt-1 text-xs text-ink-muted">半角数字のみ（1〜9999）</p>
 
