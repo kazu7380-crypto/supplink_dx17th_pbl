@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Check, CheckCircle2, PlayCircle, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, PlayCircle } from "lucide-react";
 import type { Item, Order, OrderStatus } from "@/lib/types";
 import { ORDER_STATUS_LABEL, lineDisplayItem, nextOrderStatus } from "@/lib/types";
 import { useItems } from "@/lib/useItems";
@@ -48,41 +48,6 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
     });
   };
 
-  // 全ステータスで削除可能（履歴の整理用）
-  const canDelete = true;
-
-  const handleDelete = async () => {
-    if (!canDelete) return;
-    if (typeof window === "undefined") return;
-    const label = ORDER_STATUS_LABEL[order.status];
-    const extra =
-      order.status === "delivered"
-        ? "配送済の履歴を削除します。\n"
-        : "";
-    const ok = window.confirm(
-      `${extra}${order.room} の依頼（${label}）を削除します。\nこの操作は取り消せません。よろしいですか？`,
-    );
-    if (!ok) return;
-    setBusy(true);
-    try {
-      const res = await fetch(`/api/orders/${order.id}`, { method: "DELETE" });
-      if (res.ok) {
-        clearChecks(order.id);
-        router.push("/status");
-        router.refresh();
-        return;
-      }
-      const body = await res.json().catch(() => ({}));
-      window.alert(
-        typeof body?.error === "string"
-          ? `削除に失敗しました: ${body.error}`
-          : "削除に失敗しました",
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
   const advance = async () => {
     const target = nextOrderStatus(order.status);
     if (!target) return;
@@ -120,7 +85,7 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
     }
   };
 
-  const showAdvanceArea = canDelete || order.status !== "delivered";
+  const showAdvanceArea = order.status !== "delivered";
   const stickyPad = showAdvanceArea ? "pb-28 sm:pb-0" : "";
 
   return (
@@ -274,27 +239,13 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
 
       {showAdvanceArea && (
         <div className="fixed inset-x-0 bottom-0 z-40 border-t border-ink-line bg-white px-4 py-3 shadow-lg sm:static sm:mt-5 sm:border-0 sm:bg-transparent sm:p-0 sm:shadow-none">
-          <div className="mx-auto flex max-w-6xl flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="order-2 sm:order-1">
-              {canDelete && (
-                <button
-                  type="button"
-                  onClick={handleDelete}
-                  disabled={busy}
-                  className="inline-flex w-full items-center justify-center gap-1 rounded border border-red-300 bg-white px-3 py-2 text-sm text-red-700 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                >
-                  <Trash2 size={14} aria-hidden /> 依頼を削除
-                </button>
-              )}
-            </div>
-            <div className="order-1 sm:order-2">
-              <AdvanceButton
-                status={order.status}
-                busy={busy}
-                canAdvance={order.status !== "picking" || allChecked}
-                onClick={advance}
-              />
-            </div>
+          <div className="mx-auto flex max-w-6xl justify-end">
+            <AdvanceButton
+              status={order.status}
+              busy={busy}
+              canAdvance={order.status !== "picking" || allChecked}
+              onClick={advance}
+            />
           </div>
         </div>
       )}

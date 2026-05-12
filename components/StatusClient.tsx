@@ -134,9 +134,12 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     };
   }, []);
 
+  // 依頼中・ピッキング中は日付に関わらず全て表示する（履歴で削除できないため、
+  // 受付状況タブが進行中案件の一覧として機能するように）。
+  // 配送済みは当日分のみ表示（日次のサマリ用途）。
   const todayOrders = orders.filter((o) => isToday(o.createdAt));
-  const requested = todayOrders.filter((o) => o.status === "requested");
-  const picking = todayOrders.filter((o) => o.status === "picking");
+  const requested = orders.filter((o) => o.status === "requested");
+  const picking = orders.filter((o) => o.status === "picking");
 
   // 「依頼中」の総件数（日付問わず）。残っている間はアラームを鳴らし続ける。
   const pendingRequestedCount = useMemo(
@@ -255,7 +258,7 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
       <Section
         title={`${ORDER_STATUS_LABEL.requested} (${requested.length})`}
         icon={<Circle size={16} aria-hidden />}
-        emptyText="本日の依頼中オーダーはありません"
+        emptyText="依頼中のオーダーはありません"
       >
         {requested.map((o) => (
           <OrderCard key={o.id} order={o} itemMap={itemMap} />
@@ -265,7 +268,7 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
       <Section
         title={`${ORDER_STATUS_LABEL.picking} (${picking.length})`}
         icon={<Loader2 size={16} aria-hidden />}
-        emptyText="本日のピッキング中オーダーはありません"
+        emptyText="ピッキング中のオーダーはありません"
       >
         {picking.map((o) => (
           <OrderCard key={o.id} order={o} itemMap={itemMap} />
