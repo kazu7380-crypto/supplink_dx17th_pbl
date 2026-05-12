@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { AlertCircle, Download, RotateCcw, Upload } from "lucide-react";
+import { AlertCircle, Download, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { downloadCsv, timestampForFilename } from "@/lib/csv";
 import type { Procedure } from "@/lib/types";
@@ -119,33 +119,6 @@ export function ProceduresTab() {
     );
   };
 
-  const resetMaster = async () => {
-    if (typeof window === "undefined") return;
-    if (
-      !window.confirm(
-        "診療科・術式マスタをすべて削除します。\nこの操作は取り消せません。よろしいですか？",
-      )
-    )
-      return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const res = await fetch("/api/procedures", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries: [] }),
-      });
-      if (!res.ok) throw new Error("reset failed");
-      setSavedFlash("診療科・術式マスタを削除しました");
-      window.setTimeout(() => setSavedFlash(null), 4000);
-    } catch (e) {
-      console.error(e);
-      setSaveError("リセットに失敗しました");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div>
       <Section
@@ -153,7 +126,7 @@ export function ProceduresTab() {
         description="A 列「診療科」、B 列「術式」の CSV / TSV / Excel を読み込みます。データはサーバ（Supabase）に保存され、全端末で共有されます。「CSV エクスポート」で現在のマスタを同じ列順で書き出します（UTF-8 BOM 付き）。"
       >
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
+          <label className="inline-flex w-48 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
             <Upload size={16} aria-hidden /> ファイルインポート
             <input
               ref={fileRef}
@@ -167,17 +140,9 @@ export function ProceduresTab() {
             type="button"
             onClick={exportCsv}
             disabled={procedures.length === 0}
-            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex w-48 items-center justify-center gap-2 whitespace-nowrap rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
           >
             <Download size={14} aria-hidden /> CSV エクスポート
-          </button>
-          <button
-            type="button"
-            onClick={resetMaster}
-            disabled={saving}
-            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
-          >
-            <RotateCcw size={14} aria-hidden /> マスタを空にする
           </button>
           {savedFlash && (
             <span className="ml-2 inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800">
