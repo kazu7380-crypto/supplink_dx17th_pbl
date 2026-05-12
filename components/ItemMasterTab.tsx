@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, ChevronDown, ChevronRight, Download, Image as ImageIcon, Pencil, RotateCcw, Upload } from "lucide-react";
+import { AlertCircle, ChevronDown, ChevronRight, Download, Image as ImageIcon, Pencil, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import type { Item } from "@/lib/types";
 import { downloadCsv, timestampForFilename } from "@/lib/csv";
@@ -134,38 +134,11 @@ export function ItemMasterTab({ defaultItems }: Props) {
     );
   };
 
-  const resetToDefault = async () => {
-    if (typeof window === "undefined") return;
-    if (
-      !window.confirm(
-        "物品マスタをすべて削除します（共有マスタが空になります）。\nこの操作は取り消せません。よろしいですか？",
-      )
-    )
-      return;
-    setSaving(true);
-    setSaveError(null);
-    try {
-      const res = await fetch("/api/items", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items: [] }),
-      });
-      if (!res.ok) throw new Error("reset failed");
-      setSavedFlash("物品マスタを削除しました");
-      window.setTimeout(() => setSavedFlash(null), 4000);
-    } catch (e) {
-      console.error(e);
-      setSaveError("リセットに失敗しました");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div>
       <Section title="インポート / エクスポート" description="CSV / TSV / Excel を読み込んで物品マスタを更新します。データはサーバ（Supabase）に保存され、全端末で共有されます。列の見出しは「物品コード / 材料名 / 製品番号 / 棚番 / メモ / カテゴリ」を想定しています。「CSV エクスポート」では現在のマスタを同じ列順で書き出します（UTF-8 BOM 付き）。">
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
+          <label className="inline-flex w-40 cursor-pointer items-center justify-center gap-2 rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
             <Upload size={16} aria-hidden /> ファイルインポート
             <input
               ref={fileRef}
@@ -179,17 +152,9 @@ export function ItemMasterTab({ defaultItems }: Props) {
             type="button"
             onClick={exportCsv}
             disabled={items.length === 0}
-            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex w-40 items-center justify-center gap-2 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
           >
             <Download size={14} aria-hidden /> CSV エクスポート
-          </button>
-          <button
-            type="button"
-            onClick={resetToDefault}
-            disabled={saving}
-            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
-          >
-            <RotateCcw size={14} aria-hidden /> マスタを空にする
           </button>
           {savedFlash && (
             <span className="ml-2 inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800">
