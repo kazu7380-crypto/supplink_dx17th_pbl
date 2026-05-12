@@ -138,7 +138,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
     <div>
       <Section title="インポート / エクスポート" description="CSV / TSV / Excel を読み込んで物品マスタを更新します。データはサーバ（Supabase）に保存され、全端末で共有されます。列の見出しは「物品コード / 材料名 / 製品番号 / 棚番 / メモ / カテゴリ」を想定しています。「CSV エクスポート」では現在のマスタを同じ列順で書き出します（UTF-8 BOM 付き）。">
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex w-40 cursor-pointer items-center justify-center gap-2 rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
+          <label className="inline-flex w-48 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded border border-ink bg-white px-3 py-2 text-sm font-medium text-ink hover:bg-ink hover:text-white">
             <Upload size={16} aria-hidden /> ファイルインポート
             <input
               ref={fileRef}
@@ -152,7 +152,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
             type="button"
             onClick={exportCsv}
             disabled={items.length === 0}
-            className="inline-flex w-40 items-center justify-center gap-2 rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
+            className="inline-flex w-48 items-center justify-center gap-2 whitespace-nowrap rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-50 disabled:opacity-50"
           >
             <Download size={14} aria-hidden /> CSV エクスポート
           </button>
