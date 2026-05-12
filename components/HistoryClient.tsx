@@ -66,6 +66,7 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
   const [dateFilter, setDateFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [roomFilter, setRoomFilter] = useState<string>("");
+  const [departmentFilter, setDepartmentFilter] = useState<string>("");
   const [page, setPage] = useState(1);
 
   useEffect(() => {
@@ -110,6 +111,14 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
     return Array.from(set).sort();
   }, [orders]);
 
+  const departments = useMemo(() => {
+    const set = new Set<string>();
+    for (const o of orders) {
+      if (o.department) set.add(o.department);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b, "ja"));
+  }, [orders]);
+
   const filtered = useMemo(() => {
     return orders
       .filter((o) =>
@@ -117,13 +126,16 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
       )
       .filter((o) => (statusFilter === "all" ? true : o.status === statusFilter))
       .filter((o) => (roomFilter === "" ? true : o.room === roomFilter))
+      .filter((o) =>
+        departmentFilter === "" ? true : (o.department ?? "") === departmentFilter,
+      )
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-  }, [orders, dateFilter, statusFilter, roomFilter]);
+  }, [orders, dateFilter, statusFilter, roomFilter, departmentFilter]);
 
   // フィルタが変わったら 1 ページ目に戻す
   useEffect(() => {
     setPage(1);
-  }, [dateFilter, statusFilter, roomFilter]);
+  }, [dateFilter, statusFilter, roomFilter, departmentFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
@@ -235,6 +247,22 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
             {rooms.map((r) => (
               <option key={r} value={r}>
                 {r}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col text-xs text-ink-soft sm:flex-row sm:items-center sm:text-sm">
+          <span className="mb-1 sm:mb-0">診療科</span>
+          <select
+            value={departmentFilter}
+            onChange={(e) => setDepartmentFilter(e.target.value)}
+            disabled={departments.length === 0}
+            className="rounded border border-ink-line bg-white px-2 py-1.5 text-sm disabled:bg-gray-100 disabled:text-ink-muted sm:ml-2"
+          >
+            <option value="">すべて</option>
+            {departments.map((d) => (
+              <option key={d} value={d}>
+                {d}
               </option>
             ))}
           </select>
