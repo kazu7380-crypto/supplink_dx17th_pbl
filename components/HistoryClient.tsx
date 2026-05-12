@@ -187,10 +187,13 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
   return (
     <div>
       <div className="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
-        <label className="col-span-2 flex flex-col text-xs text-ink-soft sm:col-span-1 sm:flex-row sm:items-center sm:text-sm">
-          <span className="mb-1 sm:mb-0">日付</span>
+        <div className="col-span-2 flex flex-col text-xs text-ink-soft sm:col-span-1 sm:flex-row sm:items-center sm:text-sm">
+          <label htmlFor="history-date-filter" className="mb-1 sm:mb-0">
+            日付
+          </label>
           <div className="flex items-center gap-2 sm:ml-2 sm:gap-1">
             <input
+              id="history-date-filter"
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
@@ -207,7 +210,7 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
               </button>
             )}
           </div>
-        </label>
+        </div>
         <label className="flex flex-col text-xs text-ink-soft sm:flex-row sm:items-center sm:text-sm">
           <span className="mb-1 sm:mb-0">状態</span>
           <select
