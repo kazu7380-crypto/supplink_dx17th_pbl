@@ -1,4 +1,20 @@
+/**
+ * アラーム音の再生制御。
+ *
+ * - `unlockAudio()` で AudioContext をユーザー操作の文脈で起こす（モバイル制限対応）
+ * - `startAlarm()` で `/sounds/dq_levelup_10s.wav` をループ再生開始
+ * - `stopAlarm()` で停止
+ *
+ * 二重再生は内部でガード。stopAlarm 後の遅延 start は generation tokenで無効化する。
+ */
+
+const ALARM_SRC = "/sounds/dq_levelup_10s.wav";
+
 let ctx: AudioContext | null = null;
+let alarmBuffer: AudioBuffer | null = null;
+let bufferLoadPromise: Promise<AudioBuffer | null> | null = null;
+let activeSource: AudioBufferSourceNode | null = null;
+let alarmGeneration = 0;
 
 function getCtx(): AudioContext | null {
   if (typeof window === "undefined") return null;
@@ -19,66 +35,80 @@ export function unlockAudio(): boolean {
   return c.state === "running" || c.state === "suspended";
 }
 
-/**
- * Single tone with sine + octave overtone for richness, square sub-mix for
- * cut-through, and a short attack/release envelope.
- */
-function tone(freq: number, duration: number, delay = 0): void {
+async function ensureBuffer(): Promise<AudioBuffer | null> {
+  if (alarmBuffer) return alarmBuffer;
   const c = getCtx();
-  if (!c) return;
-  const start = c.currentTime + delay;
-  const stop = start + duration;
-
-  const gain = c.createGain();
-  gain.gain.setValueAtTime(0.0001, start);
-  gain.gain.exponentialRampToValueAtTime(0.85, start + 0.02);
-  gain.gain.setValueAtTime(0.85, stop - 0.04);
-  gain.gain.exponentialRampToValueAtTime(0.0001, stop);
-  gain.connect(c.destination);
-
-  // Body: sine
-  const sine = c.createOscillator();
-  sine.type = "sine";
-  sine.frequency.value = freq;
-  sine.connect(gain);
-  sine.start(start);
-  sine.stop(stop + 0.02);
-
-  // Bite: square at half amplitude (mixed via its own gain)
-  const sqGain = c.createGain();
-  sqGain.gain.value = 0.35;
-  sqGain.connect(gain);
-  const sq = c.createOscillator();
-  sq.type = "square";
-  sq.frequency.value = freq;
-  sq.connect(sqGain);
-  sq.start(start);
-  sq.stop(stop + 0.02);
-
-  // Sparkle: octave-up sine
-  const upGain = c.createGain();
-  upGain.gain.value = 0.25;
-  upGain.connect(gain);
-  const up = c.createOscillator();
-  up.type = "sine";
-  up.frequency.value = freq * 2;
-  up.connect(upGain);
-  up.start(start);
-  up.stop(stop + 0.02);
+  if (!c) return null;
+  if (!bufferLoadPromise) {
+    bufferLoadPromise = (async () => {
+      try {
+        const res = await fetch(ALARM_SRC);
+        if (!res.ok) throw new Error(`fetch ${res.status}`);
+        const arr = await res.arrayBuffer();
+        const buf = await c.decodeAudioData(arr);
+        alarmBuffer = buf;
+        return buf;
+      } catch (e) {
+        console.error("[alarm] load failed", e);
+        bufferLoadPromise = null; // 次回再試行できるようにクリア
+        return null;
+      }
+    })();
+  }
+  return bufferLoadPromise;
 }
 
 /**
- * Attention-grabbing alarm.
- * 4 alternating tones × 2 rounds (~2.9s total).
- * Round 1: 0.0s〜1.3s, short pause, Round 2: 1.6s〜2.9s.
+ * アラームをループ再生で開始する。既に再生中なら何もしない。
+ * 非同期だが呼び出し側は await しなくてよい。
  */
-export function alarm(): void {
-  const playRound = (offset: number) => {
-    tone(880, 0.22, offset + 0.0);
-    tone(1320, 0.22, offset + 0.28);
-    tone(880, 0.22, offset + 0.56);
-    tone(1320, 0.45, offset + 0.84);
-  };
-  playRound(0);
-  playRound(1.6);
+export async function startAlarm(): Promise<void> {
+  const c = getCtx();
+  if (!c) return;
+  if (activeSource) return;
+
+  const gen = ++alarmGeneration;
+  const buf = await ensureBuffer();
+  if (!buf) return;
+  // 読み込み中に stopAlarm が呼ばれていたら無効化
+  if (gen !== alarmGeneration) return;
+  if (activeSource) return;
+
+  // AudioContext が中断されていたら resume を試みる
+  if (c.state === "suspended") {
+    try {
+      await c.resume();
+    } catch {
+      /* ignore */
+    }
+  }
+
+  const src = c.createBufferSource();
+  src.buffer = buf;
+  src.loop = true;
+  src.connect(c.destination);
+  try {
+    src.start();
+  } catch (e) {
+    console.error("[alarm] start failed", e);
+    return;
+  }
+  activeSource = src;
+}
+
+/** 再生中のアラームを停止。停止中なら何もしない。 */
+export function stopAlarm(): void {
+  alarmGeneration++; // 進行中の startAlarm を無効化
+  if (!activeSource) return;
+  try {
+    activeSource.stop();
+  } catch {
+    /* ignore */
+  }
+  try {
+    activeSource.disconnect();
+  } catch {
+    /* ignore */
+  }
+  activeSource = null;
 }

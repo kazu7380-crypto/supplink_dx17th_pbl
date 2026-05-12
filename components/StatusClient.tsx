@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Bell, BellOff, CheckCircle2, Circle, Loader2, Wifi, WifiOff } from "lucide-react";
 import type { Item, Order, OrderLine, OrderStatus } from "@/lib/types";
 import { ORDER_STATUS_LABEL, lineDisplayItem } from "@/lib/types";
-import { alarm, unlockAudio } from "@/lib/beep";
+import { startAlarm, stopAlarm, unlockAudio } from "@/lib/beep";
 import { useItems } from "@/lib/useItems";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
 
@@ -47,15 +47,10 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
   );
   const [orders, setOrders] = useState<Order[]>(initialOrders);
   const [audioOn, setAudioOn] = useState(false);
-  const audioOnRef = useRef(false);
   const [connected, setConnected] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
   const flashTimer = useRef<number | null>(null);
   const seenIdsRef = useRef<Set<string>>(new Set(initialOrders.map((o) => o.id)));
-
-  useEffect(() => {
-    audioOnRef.current = audioOn;
-  }, [audioOn]);
 
   // Restore audio preference and arm auto-unlock on first interaction.
   useEffect(() => {
@@ -100,7 +95,8 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
           });
           if (!seenIdsRef.current.has(order.id)) {
             seenIdsRef.current.add(order.id);
-            if (audioOnRef.current) alarm();
+            // アラーム鳴動は下の useEffect が pendingRequestedCount を見て
+            // 自動制御するため、ここでは視覚フラッシュのみ。
             setFlash(`新規依頼: ${order.room}`);
             if (flashTimer.current) window.clearTimeout(flashTimer.current);
             flashTimer.current = window.setTimeout(() => setFlash(null), 5000);
@@ -147,16 +143,18 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
     [orders],
   );
 
-  // 依頼中が残っている間 5 秒ごとにアラームを再鳴動させる。
+  // 通知音 ON かつ依頼中が残っている間、アラーム音をループ再生する。
   // ピッキング中／配送済へ進めば自動で停止。
+  // 件数の増減（1→2→1 など）では再起動せず、0→正 / 正→0 のときだけ start/stop。
+  const shouldAlarm = audioOn && pendingRequestedCount > 0;
   useEffect(() => {
-    if (!audioOn) return;
-    if (pendingRequestedCount === 0) return;
-    const interval = window.setInterval(() => {
-      alarm();
-    }, 5_000);
-    return () => window.clearInterval(interval);
-  }, [audioOn, pendingRequestedCount]);
+    if (!shouldAlarm) {
+      stopAlarm();
+      return;
+    }
+    void startAlarm();
+    return () => stopAlarm();
+  }, [shouldAlarm]);
 
   // 受付タブを開いている間は常にスクリーンスリープを防ぐ。
   // 受付端末を放置しても画面が消えないようにする（通知音 ON/OFF と独立）。
@@ -204,8 +202,8 @@ export function StatusClient({ items: defaultItems, initialOrders }: Props) {
       if (!ok) return;
       setAudioOn(true);
       localStorage.setItem(AUDIO_KEY, "true");
-      // 「依頼中」が残っていれば即座に1回鳴らしてユーザに状態を伝える
-      if (pendingRequestedCount > 0) alarm();
+      // 依頼中が残っていれば、shouldAlarm の変化を契機に
+      // 上の useEffect が startAlarm を呼んでループ再生を開始する。
     } else {
       setAudioOn(false);
       localStorage.setItem(AUDIO_KEY, "false");
