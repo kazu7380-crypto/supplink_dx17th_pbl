@@ -239,7 +239,7 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
             ))}
           </select>
         </label>
-        <span className="col-span-2 flex items-center gap-2 text-xs text-ink-muted sm:col-span-1 sm:ml-auto">
+        <span className="col-span-2 flex items-center justify-end gap-2 text-xs text-ink-muted sm:col-span-1 sm:ml-auto">
           <span>{filtered.length} 件</span>
           <button
             type="button"
