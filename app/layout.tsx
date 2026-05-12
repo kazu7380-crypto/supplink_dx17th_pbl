@@ -29,7 +29,7 @@ export default function RootLayout({
         <RoomProvider>
           <CartProvider>
             <Header />
-            <main className="mx-auto max-w-6xl px-4 py-6">{children}</main>
+            <main className="mx-auto max-w-6xl px-4 pt-6 pb-24 sm:pb-40">{children}</main>
             <FloatingCartButton />
             <CartModal />
           </CartProvider>
