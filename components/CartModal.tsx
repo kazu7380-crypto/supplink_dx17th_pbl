@@ -146,7 +146,7 @@ export function CartModal() {
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-3 sm:px-4"
       onMouseDown={onBackdrop}
     >
-      <div className="flex max-h-[92vh] w-full max-w-2xl flex-col rounded-lg bg-white shadow-xl">
+      <div className="flex max-h-[92vh] w-full max-w-md flex-col rounded-lg bg-white shadow-xl">
         <header className="flex items-center justify-between border-b border-ink-line px-4 py-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <ShoppingCart size={18} aria-hidden className="shrink-0" />
@@ -190,14 +190,7 @@ export function CartModal() {
 
         {!done && lines.length > 0 && (
           <footer className="flex flex-col gap-2 border-t border-ink-line bg-gray-50 px-4 py-3 sm:px-5">
-            <div
-              className={[
-                "grid gap-2",
-                departments.length > 0
-                  ? "grid-cols-1 sm:grid-cols-[1fr_1fr_2fr]"
-                  : "grid-cols-1",
-              ].join(" ")}
-            >
+            <div className="grid grid-cols-1 gap-2">
               <label className="flex flex-col gap-1 text-sm">
                 <span className="font-semibold text-ink">
                   手術室 <span className="text-red-600">*</span>
