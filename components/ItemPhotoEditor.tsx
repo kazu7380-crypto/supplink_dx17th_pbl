@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import { Camera, Trash2, Upload } from "lucide-react";
 import type { Item } from "@/lib/types";
 import { compressImage, deletePhoto, getPublicPhotoUrl, savePhoto } from "@/lib/photoStore";
+import { PhotoLightbox } from "./PhotoLightbox";
 
 type Props = { item: Item };
 
@@ -23,6 +24,7 @@ export function ItemPhotoEditor({ item }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [zoom, setZoom] = useState(false);
 
   const handleFile = async (file: File) => {
     setError(null);
@@ -102,14 +104,22 @@ export function ItemPhotoEditor({ item }: Props) {
           dragOver ? "border-ink bg-ink/[0.04]" : "border-ink-line bg-white",
         ].join(" ")}
       >
-        <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded border border-ink-line bg-gray-50">
-          {url ? (
-            // eslint-disable-next-line @next/next/no-img-element
+        {url ? (
+          <button
+            type="button"
+            onClick={() => setZoom(true)}
+            aria-label={`${item.name} の写真を拡大`}
+            title="写真を拡大"
+            className="flex h-32 w-32 shrink-0 cursor-zoom-in items-center justify-center overflow-hidden rounded border border-ink-line bg-gray-50 transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt="登録済み写真" className="h-full w-full object-cover" />
-          ) : (
+          </button>
+        ) : (
+          <div className="flex h-32 w-32 shrink-0 items-center justify-center overflow-hidden rounded border border-ink-line bg-gray-50">
             <span className="text-xs text-ink-muted">写真なし</span>
-          )}
-        </div>
+          </div>
+        )}
         <div className="flex-1 text-sm">
           <div className="text-ink-soft">
             画像をドラッグ&ドロップするか、ボタンから選択してください。
@@ -166,6 +176,7 @@ export function ItemPhotoEditor({ item }: Props) {
         className="hidden"
         onChange={onSelectChange}
       />
+      {zoom && <PhotoLightbox item={item} onClose={() => setZoom(false)} />}
     </div>
   );
 }

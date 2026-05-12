@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { X, Trash2 } from "lucide-react";
 import type { Item } from "@/lib/types";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
+import { PhotoLightbox } from "./PhotoLightbox";
 
 type Props = {
   item: Item;
@@ -22,6 +23,7 @@ export function QuantityDialog({
   const [value, setValue] = useState<string>(
     isUpdate ? String(currentQty) : "1",
   );
+  const [zoom, setZoom] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -65,7 +67,15 @@ export function QuantityDialog({
       <div className="w-full max-w-sm rounded-lg bg-white p-5 shadow-lg">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 items-start gap-3">
-            <ItemPhotoThumb item={item} size={64} />
+            <button
+              type="button"
+              onClick={() => setZoom(true)}
+              aria-label={`${item.name} の写真を拡大`}
+              title="写真を拡大"
+              className="shrink-0 cursor-zoom-in rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+            >
+              <ItemPhotoThumb item={item} size={64} />
+            </button>
             <div className="min-w-0">
               <div className="flex items-baseline justify-between gap-2 text-[11px] font-medium tracking-wide text-ink-muted">
                 <span className="truncate uppercase">{item.category ?? ""}</span>
@@ -163,6 +173,7 @@ export function QuantityDialog({
           </div>
         </div>
       </div>
+      {zoom && <PhotoLightbox item={item} onClose={() => setZoom(false)} />}
     </div>
   );
 }

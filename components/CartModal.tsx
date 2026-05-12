@@ -16,6 +16,7 @@ import { useItems } from "@/lib/useItems";
 import { useProcedures } from "@/lib/useProcedures";
 import { ROOMS, type CartLine, type Item } from "@/lib/types";
 import { ItemPhotoThumb } from "./ItemPhotoThumb";
+import { PhotoLightbox } from "./PhotoLightbox";
 
 export function CartModal() {
   const { lines, setQuantity, remove, clear, count, isOpen, close } = useCart();
@@ -362,10 +363,20 @@ function CartLineRow({
     if (n !== line.quantity) setQuantity(line.itemCode, n);
   };
 
+  const [zoom, setZoom] = useState(false);
+
   return (
     <li className="border-b border-ink-line p-3 last:border-b-0">
       <div className="flex items-start gap-3">
-        <ItemPhotoThumb item={item} size={56} />
+        <button
+          type="button"
+          onClick={() => setZoom(true)}
+          aria-label={`${item.name} の写真を拡大`}
+          title="写真を拡大"
+          className="shrink-0 cursor-zoom-in rounded transition hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-ink"
+        >
+          <ItemPhotoThumb item={item} size={56} />
+        </button>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2 text-[11px] font-medium tracking-wide text-ink-muted">
             <span className="truncate uppercase">{item.category ?? ""}</span>
@@ -424,6 +435,7 @@ function CartLineRow({
           <Trash2 size={16} />
         </button>
       </div>
+      {zoom && <PhotoLightbox item={item} onClose={() => setZoom(false)} />}
     </li>
   );
 }
