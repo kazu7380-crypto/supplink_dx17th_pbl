@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, Download } from "lucide-react";
 import type { Item, Order, OrderLine, OrderStatus } from "@/lib/types";
 import { ORDER_STATUS_LABEL, lineDisplayItem } from "@/lib/types";
+import { downloadCsv, timestampForFilename } from "@/lib/csv";
 import { useItems } from "@/lib/useItems";
 import { getSupabaseBrowser } from "@/lib/supabaseBrowser";
+
+const PAGE_SIZE = 20;
 
 type Props = { items: Item[]; initialOrders: Order[] };
 
@@ -62,6 +66,7 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
   const [dateFilter, setDateFilter] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [roomFilter, setRoomFilter] = useState<string>("");
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
     const refresh = async () => {
@@ -114,6 +119,70 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
       .filter((o) => (roomFilter === "" ? true : o.room === roomFilter))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [orders, dateFilter, statusFilter, roomFilter]);
+
+  // フィルタが変わったら 1 ページ目に戻す
+  useEffect(() => {
+    setPage(1);
+  }, [dateFilter, statusFilter, roomFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const paged = filtered.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  );
+
+  const exportCsv = () => {
+    if (filtered.length === 0) return;
+    const rows: (string | number)[][] = [];
+    for (const o of filtered) {
+      const createdAt = formatDateTime(o.createdAt);
+      const pickedAt = o.pickedAt ? formatDateTime(o.pickedAt) : "";
+      const deliveredAt = o.deliveredAt ? formatDateTime(o.deliveredAt) : "";
+      const status = ORDER_STATUS_LABEL[o.status];
+      for (const l of o.lines) {
+        const it = lineDisplayItem(l, itemMap);
+        rows.push([
+          o.id,
+          createdAt,
+          pickedAt,
+          deliveredAt,
+          status,
+          o.room,
+          o.department ?? "",
+          o.procedure ?? "",
+          l.itemCode,
+          it.name,
+          it.spec,
+          it.shelf,
+          it.memo,
+          it.category ?? "",
+          l.quantity,
+        ]);
+      }
+    }
+    downloadCsv(
+      `order-history-${timestampForFilename()}.csv`,
+      [
+        "依頼ID",
+        "受付日時",
+        "ピッキング開始",
+        "配送完了",
+        "状態",
+        "手術室",
+        "診療科",
+        "術式",
+        "物品コード",
+        "物品名",
+        "規格",
+        "棚番",
+        "メモ",
+        "カテゴリ",
+        "数量",
+      ],
+      rows,
+    );
+  };
 
   return (
     <div>
@@ -169,6 +238,14 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
         </label>
         <span className="col-span-2 flex items-center gap-2 text-xs text-ink-muted sm:col-span-1 sm:ml-auto">
           <span>{filtered.length} 件</span>
+          <button
+            type="button"
+            onClick={exportCsv}
+            disabled={filtered.length === 0}
+            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-2 py-1 text-xs text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Download size={12} aria-hidden /> CSV エクスポート
+          </button>
         </span>
       </div>
 
@@ -181,14 +258,131 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
           }
         />
       ) : (
-        <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((o) => (
-            <HistoryCard key={o.id} order={o} itemMap={itemMap} />
-          ))}
-        </ul>
+        <>
+          {totalPages > 1 && (
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              total={filtered.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+            />
+          )}
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {paged.map((o) => (
+              <HistoryCard key={o.id} order={o} itemMap={itemMap} />
+            ))}
+          </ul>
+          {totalPages > 1 && (
+            <Pagination
+              page={safePage}
+              totalPages={totalPages}
+              total={filtered.length}
+              pageSize={PAGE_SIZE}
+              onPageChange={setPage}
+            />
+          )}
+        </>
       )}
     </div>
   );
+}
+
+function Pagination({
+  page,
+  totalPages,
+  total,
+  pageSize,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  total: number;
+  pageSize: number;
+  onPageChange: (n: number) => void;
+}) {
+  const pageNumbers = buildPageNumbers(page, totalPages);
+  const start = (page - 1) * pageSize + 1;
+  const end = Math.min(page * pageSize, total);
+
+  return (
+    <nav
+      aria-label="履歴ページ切替"
+      className="my-3 flex flex-wrap items-center justify-between gap-2"
+    >
+      <div className="text-xs text-ink-muted tabular-nums">
+        {start}–{end} / {total} 件
+      </div>
+      <div className="flex flex-wrap items-center gap-1">
+        <button
+          type="button"
+          onClick={() => onPageChange(page - 1)}
+          disabled={page <= 1}
+          aria-label="前のページ"
+          className="inline-flex h-8 w-8 items-center justify-center rounded border border-ink-line bg-white text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <ChevronLeft size={14} aria-hidden />
+        </button>
+        {pageNumbers.map((n, idx) =>
+          n === "..." ? (
+            <span
+              key={`gap-${idx}`}
+              className="px-1 text-xs text-ink-muted"
+              aria-hidden
+            >
+              …
+            </span>
+          ) : (
+            <button
+              key={n}
+              type="button"
+              onClick={() => onPageChange(n)}
+              aria-current={n === page ? "page" : undefined}
+              className={[
+                "inline-flex h-8 min-w-8 items-center justify-center rounded border px-2 text-xs tabular-nums",
+                n === page
+                  ? "border-ink bg-ink font-semibold text-white"
+                  : "border-ink-line bg-white text-ink-soft hover:bg-gray-50",
+              ].join(" ")}
+            >
+              {n}
+            </button>
+          ),
+        )}
+        <button
+          type="button"
+          onClick={() => onPageChange(page + 1)}
+          disabled={page >= totalPages}
+          aria-label="次のページ"
+          className="inline-flex h-8 w-8 items-center justify-center rounded border border-ink-line bg-white text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          <ChevronRight size={14} aria-hidden />
+        </button>
+      </div>
+    </nav>
+  );
+}
+
+/**
+ * ページ番号リストを生成。
+ * 例: 8 ページ中 5 を選択 → [1, "...", 4, 5, 6, "...", 8]
+ *     5 ページ中 3 を選択 → [1, 2, 3, 4, 5]（10 ページ以下は全表示）
+ */
+function buildPageNumbers(
+  current: number,
+  total: number,
+): Array<number | "..."> {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+  const result: Array<number | "..."> = [1];
+  const left = Math.max(2, current - 1);
+  const right = Math.min(total - 1, current + 1);
+  if (left > 2) result.push("...");
+  for (let i = left; i <= right; i++) result.push(i);
+  if (right < total - 1) result.push("...");
+  result.push(total);
+  return result;
 }
 
 function HistoryCard({
