@@ -160,15 +160,15 @@ export function SearchClient({ items: defaultItems }: Props) {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
-                        {item.category && (
-                          <div className="text-[11px] font-medium uppercase tracking-wide text-ink-muted">
-                            {item.category}
-                          </div>
-                        )}
-                        <div className="text-base font-semibold leading-tight">
-                          <span className="mr-1.5 align-baseline text-xs font-normal tabular-nums text-ink-muted">
+                        <div className="flex items-baseline justify-between gap-2 text-[11px] font-medium tracking-wide text-ink-muted">
+                          <span className="truncate uppercase">
+                            {item.category ?? ""}
+                          </span>
+                          <span className="shrink-0 tabular-nums">
                             #{item.code}
                           </span>
+                        </div>
+                        <div className="text-base font-semibold leading-tight">
                           {item.name}
                         </div>
                         <div className="truncate text-sm text-ink-soft">

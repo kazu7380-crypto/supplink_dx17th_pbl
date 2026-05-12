@@ -166,15 +166,16 @@ export function DetailClient({ items: defaultItems, order: initialOrder }: Props
                 <div className="min-w-0 flex-1">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
+                      <div className="flex items-baseline justify-between gap-2 text-[11px] font-medium tracking-wide text-ink-muted">
+                        <span className="truncate uppercase">{it.category ?? ""}</span>
+                        <span className="shrink-0 tabular-nums">#{line.itemCode}</span>
+                      </div>
                       <div
                         className={[
                           "text-base font-semibold leading-tight",
                           dim ? "text-ink-muted line-through" : "",
                         ].join(" ")}
                       >
-                        <span className="mr-1.5 align-baseline text-xs font-normal tabular-nums text-ink-muted">
-                          #{line.itemCode}
-                        </span>
                         {it.name}
                       </div>
                       <div
