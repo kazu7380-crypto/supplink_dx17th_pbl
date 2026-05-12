@@ -4,6 +4,7 @@ import { useMemo, useRef, useState } from "react";
 import { AlertCircle, Download, RotateCcw, Upload } from "lucide-react";
 import * as XLSX from "xlsx";
 import { downloadCsv, timestampForFilename } from "@/lib/csv";
+import type { Procedure } from "@/lib/types";
 import { useProcedures } from "@/lib/useProcedures";
 
 type Preview = {
@@ -293,19 +294,28 @@ export function ProceduresTab() {
               : "該当する術式はありません"}
           </div>
         ) : (
-          <ul className="space-y-1">
-            {filtered.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-baseline gap-3 rounded border border-ink-line bg-white px-3 py-2 text-sm"
-              >
-                <span className="shrink-0 rounded bg-gray-100 px-2 py-0.5 text-xs font-medium text-ink-soft">
-                  {p.department}
-                </span>
-                <span className="min-w-0 flex-1">{p.name}</span>
-              </li>
+          <div className="space-y-4">
+            {groupByDepartment(filtered).map(({ department, items }) => (
+              <section key={department}>
+                <h3 className="mb-1 text-sm font-semibold text-ink">
+                  {department}
+                  <span className="ml-2 text-xs font-normal text-ink-muted">
+                    ({items.length})
+                  </span>
+                </h3>
+                <ul className="space-y-1">
+                  {items.map((p) => (
+                    <li
+                      key={p.id}
+                      className="rounded border border-ink-line bg-white px-3 py-2 text-sm"
+                    >
+                      {p.name}
+                    </li>
+                  ))}
+                </ul>
+              </section>
             ))}
-          </ul>
+          </div>
         )}
       </Section>
     </div>
@@ -379,4 +389,20 @@ function pick(row: Record<string, unknown>, keys: string[]): unknown {
     }
   }
   return undefined;
+}
+
+/**
+ * 診療科ごとにグルーピングする。診療科の登場順は元配列の順序を保ち、
+ * 各グループ内の術式順序も元配列の順序を保つ（ソートは呼び出し側で済ませる想定）。
+ */
+function groupByDepartment(
+  rows: Procedure[],
+): Array<{ department: string; items: Procedure[] }> {
+  const map = new Map<string, Procedure[]>();
+  for (const p of rows) {
+    const arr = map.get(p.department);
+    if (arr) arr.push(p);
+    else map.set(p.department, [p]);
+  }
+  return Array.from(map, ([department, items]) => ({ department, items }));
 }
