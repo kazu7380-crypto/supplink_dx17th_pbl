@@ -187,20 +187,20 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
   return (
     <div>
       <div className="mb-4 grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
-        <label className="flex flex-col text-xs text-ink-soft sm:flex-row sm:items-center sm:text-sm">
+        <label className="col-span-2 flex flex-col text-xs text-ink-soft sm:col-span-1 sm:flex-row sm:items-center sm:text-sm">
           <span className="mb-1 sm:mb-0">日付</span>
-          <div className="flex items-center gap-1 sm:ml-2">
+          <div className="flex items-center gap-2 sm:ml-2 sm:gap-1">
             <input
               type="date"
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
-              className="min-w-0 flex-1 rounded border border-ink-line bg-white px-2 py-1.5 text-sm sm:flex-none"
+              className="min-w-0 flex-1 rounded border border-ink-line bg-white px-2 py-2 text-sm sm:flex-none sm:py-1.5"
             />
             {dateFilter && (
               <button
                 type="button"
                 onClick={() => setDateFilter("")}
-                className="shrink-0 rounded border border-ink-line bg-white px-2 py-1 text-xs text-ink-soft hover:bg-gray-50"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded border border-ink-line bg-white text-base text-ink-soft hover:bg-gray-50 sm:h-auto sm:w-auto sm:px-2 sm:py-1 sm:text-xs"
                 aria-label="日付フィルタを解除"
               >
                 ×
