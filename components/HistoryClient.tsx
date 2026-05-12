@@ -239,15 +239,15 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
             ))}
           </select>
         </label>
-        <span className="col-span-2 flex items-center justify-end gap-2 text-xs text-ink-muted sm:col-span-1 sm:ml-auto">
+        <span className="col-span-2 flex items-center justify-end gap-3 text-xs text-ink-muted sm:col-span-1 sm:ml-auto">
           <span>{filtered.length} 件</span>
           <button
             type="button"
             onClick={exportCsv}
             disabled={filtered.length === 0}
-            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-2 py-1 text-xs text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded border border-ink-line bg-white px-3 py-1.5 text-sm text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            <Download size={12} aria-hidden /> CSV エクスポート
+            <Download size={14} aria-hidden /> CSV エクスポート
           </button>
         </span>
       </div>
