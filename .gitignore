@@ -2,7 +2,8 @@ node_modules
 .next
 out
 build
-.env*.local
+.env*
+!.env.local.example
 .vercel
 *.log
 .DS_Store
