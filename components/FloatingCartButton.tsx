@@ -8,7 +8,8 @@ export function FloatingCartButton() {
   const pathname = usePathname();
   const { count, open } = useCart();
 
-  if (pathname.startsWith("/status")) return null;
+  // 物品検索タブ（ルート）のみで表示。受付状況・設定など他のページでは隠す。
+  if (pathname !== "/") return null;
 
   const label =
     count > 0 ? `カートを開く（${count} 個）` : "カートを開く";
