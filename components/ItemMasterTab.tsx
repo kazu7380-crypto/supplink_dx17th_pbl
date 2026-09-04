@@ -100,9 +100,15 @@ export function ItemMasterTab({ defaultItems }: Props) {
           typeof body?.error === "string" ? body.error : "save failed",
         );
       }
-      setSavedFlash(`物品マスタを更新しました（${preview.rows.length} 件）`);
-      window.setTimeout(() => setSavedFlash(null), 4000);
+      setSavedFlash(`物品マスタを更新しました（${preview.rows.length} 件）`)
       setPreview(null);
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);   
+
+      window.setTimeout(() => setSavedFlash(null), 4000);
+      
     } catch (e) {
       console.error(e);
       setSaveError(e instanceof Error ? e.message : "保存に失敗しました");
