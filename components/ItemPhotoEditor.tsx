@@ -50,6 +50,8 @@ export function ItemPhotoEditor({ item }: Props) {
         memo: item.memo,
         category: item.category,
       });
+
+      window.location.reload();
     } catch (err) {
       console.error("[ItemPhotoEditor] save failed", err);
       const msg =
