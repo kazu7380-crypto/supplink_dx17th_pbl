@@ -94,6 +94,9 @@ export function nextOrderStatus(s: OrderStatus): OrderStatus | null {
 }
 
 export const ROOMS: string[] = [
-  "OP1", "OP2", "OP3", "OP4", "OP5",
-  "OP6", "OP7", "OP8", "OP9", "OP10",
+  "301", "302", "303", "304", "305",
+  "306", "307", "308", "309", "310",
+  "311", "312", "313", "314", "315",
+  "316", "317", "318", "319", "320",
+  "321",
 ];
