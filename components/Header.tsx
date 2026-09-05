@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Search, ClipboardList, History, Settings } from "lucide-react";
+import { Search, ClipboardList, History, LogOut, Settings } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 export function Header() {
   const pathname = usePathname();
+  const router = useRouter();
+
+  if (pathname === "/login") return null;
 
   const isSupplySide = pathname.startsWith("/status");
   const isHistory =
@@ -63,6 +67,19 @@ export function Header() {
           >
             <Settings size={18} aria-hidden />
           </Link>
+          <button
+            type="button"
+            onClick={async () => {
+              await fetch("/api/auth/logout", { method: "POST" });
+              router.replace("/login");
+              router.refresh();
+            }}
+            aria-label="ログアウト"
+            title="ログアウト"
+            className="inline-flex h-9 w-9 items-center justify-center rounded text-ink-soft hover:bg-gray-100"
+          >
+            <LogOut size={18} aria-hidden />
+          </button>
         </div>
       </div>
     </header>

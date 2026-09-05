@@ -1,9 +1,7 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import { CartProvider, RoomProvider } from "@/components/providers";
-import { Header } from "@/components/Header";
-import { FloatingCartButton } from "@/components/FloatingCartButton";
-import { CartModal } from "@/components/CartModal";
+import { AppShell } from "@/components/AppShell";
 
 export const metadata: Metadata = {
   title: "サプリンク - 物品オーダーシステム",
@@ -28,10 +26,7 @@ export default function RootLayout({
       <body>
         <RoomProvider>
           <CartProvider>
-            <Header />
-            <main className="mx-auto max-w-6xl px-4 pt-6 pb-24 sm:pb-40">{children}</main>
-            <FloatingCartButton />
-            <CartModal />
+            <AppShell>{children}</AppShell>
           </CartProvider>
         </RoomProvider>
       </body>
