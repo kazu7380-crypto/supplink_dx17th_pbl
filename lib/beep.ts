@@ -43,6 +43,7 @@ async function ensureBuffer(): Promise<AudioBuffer | null> {
     bufferLoadPromise = (async () => {
       try {
         const res = await fetch(ALARM_SRC);
+        console.log("[alarm] loaded");
         if (!res.ok) throw new Error(`fetch ${res.status}`);
         const arr = await res.arrayBuffer();
         const buf = await c.decodeAudioData(arr);
@@ -89,6 +90,7 @@ export async function startAlarm(): Promise<void> {
   src.connect(c.destination);
   try {
     src.start();
+    console.log("[alarm] started");
   } catch (e) {
     console.error("[alarm] start failed", e);
     return;
