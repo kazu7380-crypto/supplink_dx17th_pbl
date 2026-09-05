@@ -8,7 +8,7 @@
  * 二重再生は内部でガード。stopAlarm 後の遅延 start は generation tokenで無効化する。
  */
 
-const ALARM_SRC = "/sounds/dq_levelup_10s.wav";
+const ALARM_SRC = "/sounds/ttsmaker-file-2026-9-6-7-47-37.mp3";
 
 let ctx: AudioContext | null = null;
 let alarmBuffer: AudioBuffer | null = null;
