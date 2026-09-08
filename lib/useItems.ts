@@ -9,6 +9,8 @@ type DbRow = {
   name: string;
   spec: string | null;
   shelf: string | null;
+  current_stock: number | null;
+  par_stock: number | null;
   memo: string | null;
   category: string | null;
   photo_path: string | null;
@@ -21,6 +23,8 @@ function rowToItem(row: DbRow): Item {
     name: row.name,
     spec: row.spec ?? "",
     shelf: row.shelf ?? "",
+    currentStock: row.current_stock ?? undefined,
+    parStock: row.par_stock ?? undefined,
     memo: row.memo ?? "",
     category: row.category ?? undefined,
     photoPath: row.photo_path ?? undefined,
@@ -33,7 +37,7 @@ async function fetchItems(): Promise<Item[]> {
   const { data, error } = await sb
     .from("items")
     .select(
-      "code, name, spec, shelf, memo, category, photo_path, updated_at",
+      "code, name, spec, shelf, current_stock, par_stock, memo, category, photo_path, updated_at",
     )
     .order("code", { ascending: true });
   if (error) {
