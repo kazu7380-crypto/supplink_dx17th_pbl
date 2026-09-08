@@ -191,20 +191,18 @@ export function SearchClient({ items: defaultItems }: Props) {
                         {item.memo ? `メモ: ${item.memo}` : ""}
                       </span>
                     </div>
-                    <div className="mt-2 grid grid-cols-3 gap-1 text-xs leading-tight">
-                      <div className="min-w-0">
-                        <div className="text-ink-muted">棚番</div>
-                        <div className="truncate font-semibold text-ink">{item.shelf || "-"}</div>
+                    <div className="mt-2 grid grid-cols-[1fr_1fr_auto] gap-x-2 text-xs leading-tight">
+                      <div className="text-ink-muted">在庫</div>
+                      <div className="text-ink-muted">定数</div>
+                      <div className="text-right text-ink-muted">棚番</div>
+                      <div className="font-semibold tabular-nums text-ink">
+                        {item.currentStock ?? "-"}
                       </div>
-                      <div className="min-w-0">
-                        <div className="text-ink-muted">在庫</div>
-                        <div className="font-semibold text-ink">
-                          {item.currentStock ?? "-"}
-                        </div>
+                      <div className="font-semibold tabular-nums text-ink">
+                        {item.parStock ?? "-"}
                       </div>
-                      <div className="min-w-0">
-                        <div className="text-ink-muted">定数</div>
-                        <div className="font-semibold text-ink">{item.parStock ?? "-"}</div>
+                      <div className="text-right text-xl font-bold leading-none text-ink">
+                        {item.shelf || "-"}
                       </div>
                     </div>
                   </div>
