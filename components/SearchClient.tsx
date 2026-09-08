@@ -73,6 +73,14 @@ export function SearchClient({ items: defaultItems }: Props) {
   );
   const hasSearchCondition = query.trim() !== "" || category !== "";
 
+  const goToPage = (nextPage: number) => {
+    setPage(nextPage);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
   return (
     <div>
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -239,18 +247,31 @@ export function SearchClient({ items: defaultItems }: Props) {
         >
           <button
             type="button"
-            onClick={() => setPage((current) => Math.max(0, current - 1))}
+            onClick={() => goToPage(Math.max(0, page - 1))}
             disabled={page === 0}
             className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronLeft size={16} aria-hidden /> 前へ
           </button>
-          <span className="min-w-16 text-center text-xs tabular-nums text-ink-muted">
-            {page + 1} / {pageCount}
-          </span>
+          <label className="flex items-center gap-1 text-xs text-ink-muted">
+            <span className="sr-only">ページ番号</span>
+            <select
+              value={page}
+              onChange={(event) => goToPage(Number(event.target.value))}
+              aria-label="ページ番号"
+              className="rounded border border-ink-line bg-white px-2 py-2 text-center text-xs tabular-nums text-ink-soft"
+            >
+              {Array.from({ length: pageCount }, (_, pageNumber) => (
+                <option key={pageNumber} value={pageNumber}>
+                  {pageNumber + 1}
+                </option>
+              ))}
+            </select>
+            <span>/ {pageCount}</span>
+          </label>
           <button
             type="button"
-            onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
+            onClick={() => goToPage(Math.min(pageCount - 1, page + 1))}
             disabled={page >= pageCount - 1}
             className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
