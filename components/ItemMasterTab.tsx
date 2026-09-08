@@ -509,6 +509,10 @@ function mapCoreRows(
   const rows: Item[] = [];
   const seenCodes = new Set<number>();
   stockRaw.forEach((row, idx) => {
+    if (idx === 0) {
+      console.log("DEBUG_KEYS", Object.keys(row));
+      console.log("DEBUG_ROW", row);
+    }
     const lineNo = idx + 2;
     const code = toCode(pick(row, FIELD_ALIASES.code));
     if (code == null) {
