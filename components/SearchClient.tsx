@@ -114,6 +114,12 @@ export function SearchClient({ items: defaultItems }: Props) {
         {filtered.map((item) => {
           const inCartQty = cartQtyByCode.get(item.code) ?? 0;
           const inCart = inCartQty > 0;
+          const isOutOfStock = item.currentStock === 0;
+          const isLowStock =
+            !isOutOfStock &&
+            item.currentStock !== undefined &&
+            item.parStock !== undefined &&
+            item.currentStock < item.parStock;
           return (
             <li key={item.code}>
               <div
@@ -190,12 +196,32 @@ export function SearchClient({ items: defaultItems }: Props) {
                       <span className="min-w-0 truncate text-xs text-ink-muted">
                         {item.memo ? `メモ: ${item.memo}` : ""}
                       </span>
-                      {item.shelf && (
-                        <span className="shrink-0 text-2xl font-bold leading-none text-ink">
-                          {item.shelf}
+                    </div>
+                    <div className="mt-2 grid grid-cols-3 gap-1 text-xs leading-tight">
+                      <div className="min-w-0">
+                        <div className="text-ink-muted">棚番</div>
+                        <div className="truncate font-semibold text-ink">{item.shelf || "-"}</div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-ink-muted">在庫</div>
+                        <div className={
+                          isOutOfStock || isLowStock
+                            ? "font-semibold text-red-600"
+                            : "font-semibold text-ink"
+                        }>
+                          {item.currentStock ?? "-"}
+                        </div>
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-ink-muted">定数</div>
+                        <div className="font-semibold text-ink">{item.parStock ?? "-"}</div>
+                      </div>
+                    </div>
+                    {(isOutOfStock || isLowStock) && (
+                        <span className="mt-2 inline-flex w-fit items-center rounded bg-red-100 px-2 py-1 text-xs font-semibold text-red-700">
+                          {isOutOfStock ? "⛔ 在庫切れ" : "⚠ 在庫不足"}
                         </span>
                       )}
-                    </div>
                   </div>
                 </div>
               </div>

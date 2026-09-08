@@ -55,6 +55,14 @@ export async function POST(request: Request) {
       name: typeof r.name === "string" ? r.name : "",
       spec: typeof r.spec === "string" ? r.spec : "",
       shelf: typeof r.shelf === "string" ? r.shelf : "",
+      currentStock:
+        typeof r.currentStock === "number" && Number.isInteger(r.currentStock)
+          ? r.currentStock
+          : undefined,
+      parStock:
+        typeof r.parStock === "number" && Number.isInteger(r.parStock)
+          ? r.parStock
+          : undefined,
       memo: typeof r.memo === "string" ? r.memo : "",
       category:
         typeof r.category === "string" && r.category.trim()

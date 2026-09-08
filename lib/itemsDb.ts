@@ -14,6 +14,8 @@ type DbRow = {
   name: string;
   spec: string | null;
   shelf: string | null;
+  current_stock: number | null;
+  par_stock: number | null;
   memo: string | null;
   category: string | null;
   photo_path: string | null;
@@ -26,6 +28,8 @@ function rowToItem(row: DbRow): Item {
     name: row.name,
     spec: row.spec ?? "",
     shelf: row.shelf ?? "",
+    currentStock: row.current_stock ?? undefined,
+    parStock: row.par_stock ?? undefined,
     memo: row.memo ?? "",
     category: row.category ?? undefined,
     photoPath: row.photo_path ?? undefined,
@@ -34,7 +38,7 @@ function rowToItem(row: DbRow): Item {
 }
 
 const SELECT_COLS =
-  "code, name, spec, shelf, memo, category, photo_path, updated_at";
+  "code, name, spec, shelf, current_stock, par_stock, memo, category, photo_path, updated_at";
 
 export async function listItems(): Promise<Item[]> {
   const sb = getSupabaseServer();
@@ -133,6 +137,8 @@ export async function replaceAllItems(items: Item[]): Promise<void> {
     name: i.name,
     spec: i.spec ?? "",
     shelf: i.shelf ?? "",
+    current_stock: i.currentStock ?? null,
+    par_stock: i.parStock ?? null,
     memo: i.memo ?? "",
     category: i.category ?? null,
     photo_path: photoByCode.get(i.code) ?? null,

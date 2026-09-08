@@ -3,6 +3,8 @@ export type Item = {
   name: string;
   spec: string;
   shelf: string;
+  currentStock?: number;
+  parStock?: number;
   memo: string;
   category?: string;
   /** Storage 内のオブジェクトキー（例: "100.jpg"）。未登録なら undefined */

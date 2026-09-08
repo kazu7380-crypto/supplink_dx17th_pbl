@@ -25,6 +25,8 @@ const FIELD_ALIASES: Record<CsvField, string[]> = {
   memo: ["メモ", "備考", "memo"],
   category: ["カテゴリ", "カテゴリー", "分類", "category"],
 };
+const CORE_STOCK_ALIASES = ["現在庫数", "現在庫", "在庫数", "current_stock", "stock"];
+const CORE_CONSTANT_ALIASES = ["定数", "基準数", "par_stock", "constant"];
 
 export function ItemMasterTab({ defaultItems }: Props) {
   const items = useItems(defaultItems);
@@ -32,6 +34,10 @@ export function ItemMasterTab({ defaultItems }: Props) {
   const [parseError, setParseError] = useState<string | null>(null);
   const [expandedCode, setExpandedCode] = useState<number | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  const coreStockFileRef = useRef<HTMLInputElement>(null);
+  const coreShelfFileRef = useRef<HTMLInputElement>(null);
+  const [coreStockFile, setCoreStockFile] = useState<File | null>(null);
+  const [coreShelfFile, setCoreShelfFile] = useState<File | null>(null);
   const [filter, setFilter] = useState("");
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -84,6 +90,30 @@ export function ItemMasterTab({ defaultItems }: Props) {
     if (fileRef.current) fileRef.current.value = "";
   };
 
+  const onCoreFileChange = (kind: "stock" | "shelf") => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0] ?? null;
+    if (kind === "stock") setCoreStockFile(file);
+    else setCoreShelfFile(file);
+    e.target.value = "";
+  };
+
+  const generateFromCoreFiles = async () => {
+    if (!coreStockFile || !coreShelfFile) return;
+    setParseError(null);
+    setPreview(null);
+    try {
+      const [stockRows, shelfRows] = await Promise.all([
+        readSpreadsheetRows(coreStockFile),
+        readSpreadsheetRows(coreShelfFile),
+      ]);
+      const result = mapCoreRows(stockRows, shelfRows);
+      setPreview(result);
+    } catch (err) {
+      console.error(err);
+      setParseError("基幹マスタの読み込みに失敗しました。CSV / Excel / TSV の形式を確認してください。");
+    }
+  };
+
   const applyPreview = async () => {
     if (!preview) return;
     setSaving(true);
@@ -130,12 +160,14 @@ export function ItemMasterTab({ defaultItems }: Props) {
       it.name,
       it.spec,
       it.shelf,
+      it.currentStock ?? "",
+      it.parStock ?? "",
       it.memo,
       it.category ?? "",
     ]);
     downloadCsv(
       `items-master-${timestampForFilename()}.csv`,
-      ["物品コード", "材料名", "製品番号", "棚番", "メモ", "カテゴリ"],
+      ["物品コード", "材料名", "製品番号", "棚番", "現在庫数", "定数", "メモ", "カテゴリ"],
       rows,
     );
   };
@@ -162,6 +194,25 @@ export function ItemMasterTab({ defaultItems }: Props) {
           >
             <Download size={14} aria-hidden /> CSV エクスポート
           </button>
+          <div className="flex w-full flex-wrap items-center gap-2 rounded border border-ink-line bg-gray-50 p-2 sm:w-auto">
+            <span className="w-full text-xs font-semibold text-ink-soft sm:w-auto">基幹マスタ取込</span>
+            <label className="inline-flex cursor-pointer items-center justify-center rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-100">
+              在庫マスタリスト.csv
+              <input ref={coreStockFileRef} type="file" accept=".csv,.tsv,.xlsx,.xls,text/csv,text/tab-separated-values" className="hidden" onChange={onCoreFileChange("stock")} />
+            </label>
+            <label className="inline-flex cursor-pointer items-center justify-center rounded border border-ink-line bg-white px-3 py-2 text-sm text-ink-soft hover:bg-gray-100">
+              棚番定数入出力ファイル.csv
+              <input ref={coreShelfFileRef} type="file" accept=".csv,.tsv,.xlsx,.xls,text/csv,text/tab-separated-values" className="hidden" onChange={onCoreFileChange("shelf")} />
+            </label>
+            <button type="button" onClick={generateFromCoreFiles} disabled={!coreStockFile || !coreShelfFile} className="inline-flex items-center justify-center rounded bg-ink px-3 py-2 text-sm font-medium text-white hover:opacity-90 disabled:cursor-not-allowed disabled:bg-gray-300">
+              items-masterを生成
+            </button>
+            {(coreStockFile || coreShelfFile) && (
+              <span className="w-full text-xs text-ink-muted">
+                {coreStockFile ? "在庫: 選択済み" : "在庫: 未選択"} / {coreShelfFile ? "棚番: 選択済み" : "棚番: 未選択"}
+              </span>
+            )}
+          </div>
           {savedFlash && (
             <span className="ml-2 inline-flex items-center gap-1 rounded bg-emerald-100 px-2 py-1 text-xs font-medium text-emerald-800">
               {savedFlash}
@@ -201,6 +252,8 @@ export function ItemMasterTab({ defaultItems }: Props) {
                     <th className="px-2 py-1">名前</th>
                     <th className="px-2 py-1">仕様</th>
                     <th className="px-2 py-1">棚</th>
+                    <th className="px-2 py-1">現在庫</th>
+                    <th className="px-2 py-1">定数</th>
                     <th className="px-2 py-1">カテゴリ</th>
                   </tr>
                 </thead>
@@ -211,12 +264,14 @@ export function ItemMasterTab({ defaultItems }: Props) {
                       <td className="px-2 py-1">{r.name}</td>
                       <td className="px-2 py-1 text-ink-soft">{r.spec}</td>
                       <td className="px-2 py-1 text-ink-soft">{r.shelf}</td>
+                      <td className="px-2 py-1 text-ink-soft">{r.currentStock ?? ""}</td>
+                      <td className="px-2 py-1 text-ink-soft">{r.parStock ?? ""}</td>
                       <td className="px-2 py-1 text-ink-soft">{r.category ?? ""}</td>
                     </tr>
                   ))}
                   {preview.rows.length > 50 && (
                     <tr>
-                      <td colSpan={5} className="px-2 py-1 text-center text-ink-muted">
+                      <td colSpan={7} className="px-2 py-1 text-center text-ink-muted">
                         ... ほか {preview.rows.length - 50} 件
                       </td>
                     </tr>
@@ -397,6 +452,8 @@ function mapRows(raw: Record<string, unknown>[]): Preview {
 
     const spec = String(pick(r, FIELD_ALIASES.spec) ?? "").trim();
     const shelf = String(pick(r, FIELD_ALIASES.shelf) ?? "").trim();
+    const currentStock = toOptionalNumber(pick(r, CORE_STOCK_ALIASES));
+    const constant = toOptionalNumber(pick(r, CORE_CONSTANT_ALIASES));
     const memo = String(pick(r, FIELD_ALIASES.memo) ?? "").trim();
     const categoryRaw = String(pick(r, FIELD_ALIASES.category) ?? "").trim();
 
@@ -405,6 +462,8 @@ function mapRows(raw: Record<string, unknown>[]): Preview {
       name,
       spec,
       shelf,
+      currentStock,
+      parStock: constant,
       memo,
       category: categoryRaw || undefined,
     });
@@ -413,6 +472,69 @@ function mapRows(raw: Record<string, unknown>[]): Preview {
   // de-duplicate by code (last wins, since we want to honor the warning's "後の行を採用")
   const map = new Map<number, Item>();
   for (const r of rows) map.set(r.code, r);
+  return { rows: Array.from(map.values()), warnings };
+}
+
+async function readSpreadsheetRows(file: File): Promise<Record<string, unknown>[]> {
+  const buf = await file.arrayBuffer();
+  const wb = XLSX.read(buf, { type: "array" });
+  if (wb.SheetNames.length === 0) throw new Error("sheet not found");
+  return XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]], {
+    defval: "",
+  });
+}
+
+function mapCoreRows(
+  stockRaw: Record<string, unknown>[],
+  shelfRaw: Record<string, unknown>[],
+): Preview {
+  const shelfByCode = new Map<number, string>();
+  const warnings: string[] = [];
+
+  shelfRaw.forEach((row, idx) => {
+    const code = toCode(pick(row, FIELD_ALIASES.code));
+    if (code == null) return;
+    const shelf = String(pick(row, FIELD_ALIASES.shelf) ?? "").trim();
+    shelfByCode.set(code, shelf);
+    if (!shelf) warnings.push(`棚番ファイル ${idx + 2}行目: 棚番が空です`);
+  });
+
+  const rows: Item[] = [];
+  const seenCodes = new Set<number>();
+  stockRaw.forEach((row, idx) => {
+    const lineNo = idx + 2;
+    const code = toCode(pick(row, FIELD_ALIASES.code));
+    if (code == null) {
+      warnings.push(`${lineNo}行目: 物品コードが数値ではないためスキップしました`);
+      return;
+    }
+    if (seenCodes.has(code)) warnings.push(`${lineNo}行目: 物品コード ${code} が重複しています（後の行を採用）`);
+    seenCodes.add(code);
+
+    const name = String(pick(row, FIELD_ALIASES.name) ?? "").trim();
+    if (!name) warnings.push(`${lineNo}行目: 材料名が空です`);
+    const currentStock = toOptionalNumber(pick(row, CORE_STOCK_ALIASES));
+    const constant = toOptionalNumber(pick(row, CORE_CONSTANT_ALIASES));
+    if (currentStock == null && pick(row, CORE_STOCK_ALIASES) !== undefined) {
+      warnings.push(`${lineNo}行目: 現在庫数が数値ではありません`);
+    }
+    if (constant == null && pick(row, CORE_CONSTANT_ALIASES) !== undefined) {
+      warnings.push(`${lineNo}行目: 定数が数値ではありません`);
+    }
+    rows.push({
+      code,
+      name,
+      spec: String(pick(row, FIELD_ALIASES.spec) ?? "").trim(),
+      shelf: shelfByCode.get(code) ?? "",
+      currentStock,
+      parStock: constant,
+      memo: "",
+      category: undefined,
+    });
+  });
+
+  const map = new Map<number, Item>();
+  for (const row of rows) map.set(row.code, row);
   return { rows: Array.from(map.values()), warnings };
 }
 
@@ -438,6 +560,16 @@ function toCode(value: unknown): number | null {
     if (Number.isFinite(n)) return Math.trunc(n);
   }
   return null;
+}
+
+function toOptionalNumber(value: unknown): number | undefined {
+  if (value === "" || value == null) return undefined;
+  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
+  if (typeof value === "string" && value.trim()) {
+    const number = Number(value.trim());
+    if (Number.isFinite(number)) return Math.trunc(number);
+  }
+  return undefined;
 }
 
 const MEMO_MAX_LEN = 500;

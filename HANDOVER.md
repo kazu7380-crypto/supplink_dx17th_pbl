@@ -201,7 +201,8 @@ npm run dev
 - **インポート / エクスポート**:
   - CSV / TSV / Excel(.xlsx, .xls) を取り込み、プレビュー表示後に確定で全置換
   - 列見出しは別名対応（物品コード/コード/code、材料名/品名/name 等）
-  - **CSV エクスポート**: 現在のマスタを同じ列順で書き出し（UTF-8 BOM 付き）
+  - **基幹マスタ取込**: 「在庫マスタリスト.csv」と「棚番定数入出力ファイル.csv」を物品コードで結合し、在庫側を親データとして items-master を生成する。現在庫数・定数を保持し、棚番がない行は空欄、メモ・カテゴリは空欄で生成する
+  - **CSV エクスポート**: 現在のマスタを「物品コード / 材料名 / 製品番号 / 棚番 / 現在庫数 / 定数 / メモ / カテゴリ」の列順で書き出し（UTF-8 BOM 付き）
   - インポート時、既存の `photo_path` は **保持** される（CSV 再投入で写真が消えない）
 - **物品一覧**:
   - 検索 + カテゴリフィルタ
@@ -428,6 +429,8 @@ orders の DELETE は **意図的にポリシーを書かない** ことで拒�
 
 ```sql
 -- items
+alter table items add column if not exists current_stock integer;
+alter table items add column if not exists par_stock integer;
 alter table items enable row level security;
 create policy "anon can read items" on items for select to anon using (true);
 create policy "anon can insert items" on items for insert to anon with check (true);
