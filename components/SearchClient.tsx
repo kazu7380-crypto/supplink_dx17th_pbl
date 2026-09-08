@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, X, Plus, Check } from "lucide-react";
+import { Search, X, Plus, Check, ChevronLeft, ChevronRight } from "lucide-react";
 import { matches } from "@/lib/normalize";
 import type { Item } from "@/lib/types";
 import { useItems } from "@/lib/useItems";
@@ -20,6 +20,7 @@ export function SearchClient({ items: defaultItems }: Props) {
   const [picked, setPicked] = useState<Item | null>(null);
   const [zoom, setZoom] = useState<Item | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
   const { add, setQuantity, remove, lines } = useCart();
 
   useEffect(() => {
@@ -61,7 +62,15 @@ export function SearchClient({ items: defaultItems }: Props) {
     return result;
   }, [items, query, category]);
 
-  const visibleItems = filtered.slice(0, SEARCH_RESULT_LIMIT);
+  useEffect(() => {
+    setPage(0);
+  }, [query, category, items]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / SEARCH_RESULT_LIMIT));
+  const visibleItems = filtered.slice(
+    page * SEARCH_RESULT_LIMIT,
+    (page + 1) * SEARCH_RESULT_LIMIT,
+  );
   const hasSearchCondition = query.trim() !== "" || category !== "";
 
   return (
@@ -222,6 +231,33 @@ export function SearchClient({ items: defaultItems }: Props) {
           );
         })}
       </ul>
+
+      {filtered.length > 0 && (
+        <nav
+          aria-label="検索結果のページ移動"
+          className="mt-4 flex items-center justify-center gap-3 text-sm"
+        >
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.max(0, current - 1))}
+            disabled={page === 0}
+            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ChevronLeft size={16} aria-hidden /> 前へ
+          </button>
+          <span className="min-w-16 text-center text-xs tabular-nums text-ink-muted">
+            {page + 1} / {pageCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
+            disabled={page >= pageCount - 1}
+            className="inline-flex items-center gap-1 rounded border border-ink-line bg-white px-3 py-2 text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            次へ <ChevronRight size={16} aria-hidden />
+          </button>
+        </nav>
+      )}
 
       {hasSearchCondition && filtered.length === 0 && (
         <div className="mt-10 text-center text-sm text-ink-muted">
