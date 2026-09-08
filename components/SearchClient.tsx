@@ -11,6 +11,7 @@ import { PhotoLightbox } from "./PhotoLightbox";
 import { useCart } from "./providers";
 
 type Props = { items: Item[] };
+const SEARCH_RESULT_LIMIT = 100;
 
 export function SearchClient({ items: defaultItems }: Props) {
   const items = useItems(defaultItems);
@@ -60,6 +61,10 @@ export function SearchClient({ items: defaultItems }: Props) {
     return result;
   }, [items, query, category]);
 
+  const visibleItems = query.trim()
+    ? filtered.slice(0, SEARCH_RESULT_LIMIT)
+    : [];
+
   return (
     <div>
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -107,7 +112,9 @@ export function SearchClient({ items: defaultItems }: Props) {
 
       <div className="mt-3 flex items-center justify-between text-xs text-ink-muted">
         <span>
-          {filtered.length} / {items.length} 件
+          {query.trim()
+            ? `${visibleItems.length} 件表示（該当 ${filtered.length} 件 / 全 ${items.length} 件）`
+            : `検索文字を入力してください（全 ${items.length} 件）`}
         </span>
         {flash && (
           <span className="rounded bg-ink px-2 py-1 text-white">{flash}</span>
@@ -115,7 +122,7 @@ export function SearchClient({ items: defaultItems }: Props) {
       </div>
 
       <ul className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
-        {filtered.map((item) => {
+        {visibleItems.map((item) => {
           const inCartQty = cartQtyByCode.get(item.code) ?? 0;
           const inCart = inCartQty > 0;
           return (
@@ -217,7 +224,7 @@ export function SearchClient({ items: defaultItems }: Props) {
         })}
       </ul>
 
-      {filtered.length === 0 && (
+      {query.trim() && filtered.length === 0 && (
         <div className="mt-10 text-center text-sm text-ink-muted">
           一致する物品がありません
         </div>

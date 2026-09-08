@@ -27,6 +27,7 @@ const FIELD_ALIASES: Record<CsvField, string[]> = {
 };
 const CORE_STOCK_ALIASES = ["現在庫数", "現在庫", "在庫数", "current_stock", "stock"];
 const CORE_CONSTANT_ALIASES = ["定数", "基準数", "par_stock", "constant"];
+const ITEM_LIST_PAGE_SIZE = 100;
 
 export function ItemMasterTab({ defaultItems }: Props) {
   const items = useItems(defaultItems);
@@ -42,6 +43,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
+  const [listPage, setListPage] = useState(0);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -60,6 +62,16 @@ export function ItemMasterTab({ defaultItems }: Props) {
       return hay.includes(q);
     });
   }, [items, filter, categoryFilter]);
+
+  useEffect(() => {
+    setListPage(0);
+  }, [filter, categoryFilter, items]);
+
+  const pageCount = Math.max(1, Math.ceil(filtered.length / ITEM_LIST_PAGE_SIZE));
+  const visibleItems = filtered.slice(
+    listPage * ITEM_LIST_PAGE_SIZE,
+    (listPage + 1) * ITEM_LIST_PAGE_SIZE,
+  );
 
   const handleFile = async (file: File) => {
     setParseError(null);
@@ -332,12 +344,12 @@ export function ItemMasterTab({ defaultItems }: Props) {
             </select>
           )}
           <span className="text-xs text-ink-muted">
-            {filtered.length} 件表示
+            {filtered.length} 件中 {visibleItems.length} 件表示
           </span>
         </div>
 
         <ul className="space-y-2">
-          {filtered.map((it) => {
+          {visibleItems.map((it) => {
             const open = expandedCode === it.code;
             return (
               <li
@@ -403,6 +415,29 @@ export function ItemMasterTab({ defaultItems }: Props) {
             );
           })}
         </ul>
+        {filtered.length > ITEM_LIST_PAGE_SIZE && (
+          <div className="mt-4 flex items-center justify-center gap-3 text-sm">
+            <button
+              type="button"
+              onClick={() => setListPage((page) => Math.max(0, page - 1))}
+              disabled={listPage === 0}
+              className="rounded border border-ink-line bg-white px-3 py-1.5 text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              前へ
+            </button>
+            <span className="text-xs tabular-nums text-ink-muted">
+              {listPage + 1} / {pageCount} ページ
+            </span>
+            <button
+              type="button"
+              onClick={() => setListPage((page) => Math.min(pageCount - 1, page + 1))}
+              disabled={listPage >= pageCount - 1}
+              className="rounded border border-ink-line bg-white px-3 py-1.5 text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              次へ
+            </button>
+          </div>
+        )}
         {filtered.length === 0 && (
           <div className="rounded-lg border border-dashed border-ink-line bg-white p-6 text-center text-sm text-ink-muted">
             該当する物品はありません
