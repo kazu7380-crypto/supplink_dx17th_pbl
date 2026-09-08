@@ -19,8 +19,8 @@ type Preview = {
 type CsvField = "code" | "name" | "spec" | "shelf" | "memo" | "category";
 const FIELD_ALIASES: Record<CsvField, string[]> = {
   code: ["物品コード", "コード", "code"],
-  name: ["材料名", "品名", "名前", "name"],
-  spec: ["製品番号", "製品記号", "規格", "spec"],
+  name: ["物品名", "材料名", "品名", "名前", "name"],
+  spec: ["規格製品番号", "製品番号", "製品記号", "規格", "spec"],
   shelf: ["棚番", "棚番号", "棚", "shelf"],
   memo: ["メモ", "備考", "memo"],
   category: ["カテゴリ", "カテゴリー", "分類", "category"],
@@ -541,9 +541,10 @@ function mapCoreRows(
 function pick(row: Record<string, unknown>, keys: string[]): unknown {
   for (const k of keys) {
     if (k in row && row[k] !== "" && row[k] != null) return row[k];
-    // case-insensitive match
+    // 見出しの前後空白・BOM・大文字小文字を吸収する。
     for (const actual of Object.keys(row)) {
-      if (actual.toLowerCase() === k.toLowerCase() && row[actual] !== "" && row[actual] != null) {
+      const normalizedActual = actual.replace(/^\uFEFF/, "").trim().toLowerCase();
+      if (normalizedActual === k.toLowerCase() && row[actual] !== "" && row[actual] != null) {
         return row[actual];
       }
     }
