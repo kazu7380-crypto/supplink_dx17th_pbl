@@ -61,9 +61,8 @@ export function SearchClient({ items: defaultItems }: Props) {
     return result;
   }, [items, query, category]);
 
-  const visibleItems = query.trim()
-    ? filtered.slice(0, SEARCH_RESULT_LIMIT)
-    : [];
+  const visibleItems = filtered.slice(0, SEARCH_RESULT_LIMIT);
+  const hasSearchCondition = query.trim() !== "" || category !== "";
 
   return (
     <div>
@@ -112,9 +111,9 @@ export function SearchClient({ items: defaultItems }: Props) {
 
       <div className="mt-3 flex items-center justify-between text-xs text-ink-muted">
         <span>
-          {query.trim()
+          {hasSearchCondition
             ? `${visibleItems.length} 件表示（該当 ${filtered.length} 件 / 全 ${items.length} 件）`
-            : `検索文字を入力してください（全 ${items.length} 件）`}
+            : `${visibleItems.length} 件表示（全 ${items.length} 件）`}
         </span>
         {flash && (
           <span className="rounded bg-ink px-2 py-1 text-white">{flash}</span>
@@ -224,7 +223,7 @@ export function SearchClient({ items: defaultItems }: Props) {
         })}
       </ul>
 
-      {query.trim() && filtered.length === 0 && (
+      {hasSearchCondition && filtered.length === 0 && (
         <div className="mt-10 text-center text-sm text-ink-muted">
           一致する物品がありません
         </div>
