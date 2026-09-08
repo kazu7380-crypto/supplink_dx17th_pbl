@@ -106,6 +106,13 @@ export function ItemMasterTab({ defaultItems }: Props) {
         readSpreadsheetRows(coreStockFile),
         readSpreadsheetRows(coreShelfFile),
       ]);
+      const firstStockCode = stockRows.length > 0
+        ? pick(stockRows[0], FIELD_ALIASES.code)
+        : undefined;
+      console.log("[基幹マスタ取込] 在庫マスタリスト.csv 1行目の物品コード", {
+        raw: firstStockCode,
+        trimmed: firstStockCode == null ? "" : String(firstStockCode).trim(),
+      });
       const result = mapCoreRows(stockRows, shelfRows);
       setPreview(result);
     } catch (err) {
@@ -553,14 +560,11 @@ function pick(row: Record<string, unknown>, keys: string[]): unknown {
 }
 
 function toCode(value: unknown): number | null {
-  if (typeof value === "number" && Number.isFinite(value)) return Math.trunc(value);
-  if (typeof value === "string") {
-    const s = value.trim();
-    if (!s) return null;
-    const n = Number(s);
-    if (Number.isFinite(n)) return Math.trunc(n);
-  }
-  return null;
+  if (value == null) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const number = Number(trimmed);
+  return Number.isFinite(number) ? Math.trunc(number) : null;
 }
 
 function toOptionalNumber(value: unknown): number | undefined {
