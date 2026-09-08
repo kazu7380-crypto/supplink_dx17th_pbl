@@ -484,11 +484,26 @@ function mapRows(raw: Record<string, unknown>[]): Preview {
 
 async function readSpreadsheetRows(file: File): Promise<Record<string, unknown>[]> {
   const buf = await file.arrayBuffer();
-  const wb = XLSX.read(buf, { type: "array" });
+  const isTextFile = /\.(csv|tsv)$/i.test(file.name) ||
+    file.type === "text/csv" ||
+    file.type === "text/tab-separated-values";
+  const wb = isTextFile
+    ? XLSX.read(decodeCsvBuffer(buf), { type: "string" })
+    : XLSX.read(buf, { type: "array" });
   if (wb.SheetNames.length === 0) throw new Error("sheet not found");
   return XLSX.utils.sheet_to_json<Record<string, unknown>>(wb.Sheets[wb.SheetNames[0]], {
     defval: "",
   });
+}
+
+function decodeCsvBuffer(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  try {
+    // UTF-8として不正なバイト列なら、CP932（Shift-JIS）へフォールバックする。
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes).replace(/^\uFEFF/, "");
+  } catch {
+    return new TextDecoder("shift-jis").decode(bytes).replace(/^\uFEFF/, "");
+  }
 }
 
 function mapCoreRows(
