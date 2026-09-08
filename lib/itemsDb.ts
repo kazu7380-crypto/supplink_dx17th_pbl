@@ -39,18 +39,28 @@ function rowToItem(row: DbRow): Item {
 
 const SELECT_COLS =
   "code, name, spec, shelf, current_stock, par_stock, memo, category, photo_path, updated_at";
+const ITEMS_PAGE_SIZE = 1000;
 
 export async function listItems(): Promise<Item[]> {
   const sb = getSupabaseServer();
-  const { data, error } = await sb
-    .from("items")
-    .select(SELECT_COLS)
-    .order("code", { ascending: true });
-  if (error) {
-    console.error("[itemsDb.list]", error);
-    throw error;
+  const rows: DbRow[] = [];
+
+  for (let offset = 0; ; offset += ITEMS_PAGE_SIZE) {
+    const { data, error } = await sb
+      .from("items")
+      .select(SELECT_COLS)
+      .order("code", { ascending: true })
+      .range(offset, offset + ITEMS_PAGE_SIZE - 1);
+    if (error) {
+      console.error("[itemsDb.list]", error);
+      throw error;
+    }
+
+    const page = (data ?? []) as DbRow[];
+    rows.push(...page);
+    if (page.length === 0) break;
   }
-  const rows = (data ?? []) as DbRow[];
+
   if (rows.length === 0) return [];
   return rows.map(rowToItem);
 }

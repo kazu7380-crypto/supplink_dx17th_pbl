@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search, X, Plus, Check } from "lucide-react";
 import { matches } from "@/lib/normalize";
 import type { Item } from "@/lib/types";
@@ -20,6 +20,10 @@ export function SearchClient({ items: defaultItems }: Props) {
   const [zoom, setZoom] = useState<Item | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
   const { add, setQuantity, remove, lines } = useCart();
+
+  useEffect(() => {
+    console.log(items.length);
+  }, [items]);
 
   const cartQtyByCode = useMemo(() => {
     const m = new Map<number, number>();

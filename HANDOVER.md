@@ -1,7 +1,7 @@
 # サプリンク 引き継ぎ仕様書（HANDOVER）
 
 > 物品オーダーシステム / Sapurink
-> 最終更新: 2026-05-18
+> 最終更新: 2026-09-08
 
 このドキュメントは、本プロジェクトの**実装済み機能・技術構成・運用ポリシー・拡張時の指針**を 1 ファイルにまとめたものです。社内の引き継ぎ、外部委託先への共有を想定しています。
 
@@ -41,7 +41,7 @@
 
 ### 1.3 現在のフェーズ
 - **PBL / 試運用フェーズ**
-- 認証は未導入。URL を知っている人のみが利用できる前提
+- ログイン認証を導入済み。`LOGIN_ID` / `LOGIN_PASSWORD` で認証する
 - Supabase RLS で DB レイヤーの権限は最小限に絞っている
 - 個人情報（患者氏名・カルテ番号等）は扱わない
 
@@ -59,7 +59,7 @@
 | デプロイ | Vercel（Production / Preview 自動） |
 | 通知音 | WebAudio API（AudioBufferSource ループ再生） |
 | Excel/CSV | xlsx (SheetJS) |
-| 認証 | **未導入** |
+| 認証 | 環境変数ベースのログイン認証（HMAC 署名セッション） |
 
 主要ライブラリは [`package.json`](package.json) を参照。
 
@@ -90,6 +90,8 @@ npm run dev
 |---|---|---|
 | `NEXT_PUBLIC_SUPABASE_URL` | `https://<project>.supabase.co` | Supabase ダッシュボード → Settings → API → Project URL |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `eyJhbGciOi...` | Supabase ダッシュボード → Settings → API → Project API keys → `anon` / `publishable` |
+| `LOGIN_ID` | ログイン ID | Vercel または `.env.local` に設定（サーバー専用） |
+| `LOGIN_PASSWORD` | ログインパスワード | Vercel または `.env.local` に設定（サーバー専用） |
 
 `NEXT_PUBLIC_` プレフィックスはブラウザバンドルに焼き込まれるため、**公開しても安全な設計のキーのみ**を使用する。`service_role` キーは絶対に `NEXT_PUBLIC_` を付けない。
 
@@ -114,7 +116,8 @@ npm run dev
 
 - **検索ボックス**: 物品名・棚番号・コード等で曖昧検索
 - **カテゴリ絞り込みプルダウン**（カテゴリが 1 件以上設定されていれば表示）
-- **検索結果カード（グリッド表示）**: 写真 + カテゴリ + #コード + 物品名 + 仕様 + メモ + 棚番号
+- **検索結果カード（グリッド表示）**: 写真 + カテゴリ + #コード + 物品名 + 仕様 + メモ + 棚番号 + 現在庫数 + 定数
+  - 現在庫数は `current_stock`、定数は `par_stock` として表示
   - PC は 3 列、タブレットは 2 列、スマホは 1 列のレスポンシブ
   - カート在中の物品は枠線とアクセントバーで強調表示
 - **数量入力ダイアログ** (`QuantityDialog`): カード/写真タップで出現
@@ -201,9 +204,10 @@ npm run dev
 - **インポート / エクスポート**:
   - CSV / TSV / Excel(.xlsx, .xls) を取り込み、プレビュー表示後に確定で全置換
   - 列見出しは別名対応（物品コード/コード/code、材料名/品名/name 等）
-  - **基幹マスタ取込**: 「在庫マスタリスト.csv」と「棚番定数入出力ファイル.csv」を物品コードで結合し、在庫側を親データとして items-master を生成する。現在庫数・定数を保持し、棚番がない行は空欄、メモ・カテゴリは空欄で生成する
+  - **基幹マスタ取込**: 「在庫マスタリスト.csv」と「棚番定数入出力ファイル.csv」を物品コードで自動結合し、在庫側を親データとして items-master を生成する。`current_stock`（現在庫数）と `par_stock`（定数）を保持し、棚番がない行は空欄、メモ・カテゴリは空欄で生成する
   - **CSV エクスポート**: 現在のマスタを「物品コード / 材料名 / 製品番号 / 棚番 / 現在庫数 / 定数 / メモ / カテゴリ」の列順で書き出し（UTF-8 BOM 付き）
   - インポート時、既存の `photo_path` は **保持** される（CSV 再投入で写真が消えない）
+  - **写真保存改善**: 写真は物品コード固定の Storage キーへ保存し、保存完了後に `items.photo_path` を更新する。削除時は Storage とマスタの参照を同時に処理し、保存時は最大 80KB に自動圧縮する
 - **物品一覧**:
   - 検索 + カテゴリフィルタ
   - 行展開で写真の登録 / 撮影 / 削除 と **メモの編集**
@@ -233,6 +237,8 @@ npm run dev
 | `name` | TEXT | 材料名 |
 | `spec` | TEXT | 製品番号・規格 |
 | `shelf` | TEXT | 棚番号 |
+| `current_stock` | INTEGER | 現在庫数。基幹マスタ取込で設定 |
+| `par_stock` | INTEGER | 定数。基幹マスタ取込で設定 |
 | `memo` | TEXT | 通称・検索ワード |
 | `category` | TEXT | カテゴリ（任意） |
 | `photo_path` | TEXT | Storage オブジェクトキー（例: `"100.jpg"`） |
@@ -333,6 +339,15 @@ TypeScript の型は [`lib/types.ts`](lib/types.ts) に集約。主要なもの�
 | GET | `/api/procedures` | 全件取得 |
 | POST | `/api/procedures` | **全置換**。body: `{ entries: [{ department, name }] }` |
 
+### 6.4 認証
+
+| メソッド | パス | 概要 |
+|---|---|---|
+| POST | `/api/auth/login` | `LOGIN_ID` / `LOGIN_PASSWORD` を検証し、署名済みセッション Cookie を発行 |
+| POST | `/api/auth/logout` | セッション Cookie を削除 |
+
+`middleware.ts` がログイン画面と認証 API を除く画面・API へのアクセスを保護する。セッションは `HttpOnly` Cookie（`supplink_session`）で管理し、認証キーはサーバー側環境変数から生成する。
+
 ---
 
 ## 7. 状態管理・ローカル保存
@@ -376,6 +391,8 @@ TypeScript の型は [`lib/types.ts`](lib/types.ts) に集約。主要なもの�
 | `orders-stream` | `StatusClient` | 受付状況のリアルタイム更新（INSERT / UPDATE / DELETE） |
 | `history-orders` | `HistoryClient` | 履歴のリアルタイム更新 |
 
+ブラウザ用 Supabase クライアントは Realtime のイベントレート設定を持ち、各購読は変更後に必要なデータを再取得する。Supabase 側では対象テーブルの Realtime を有効化し、RLS の SELECT ポリシーも設定する。
+
 ### 8.2 通知音 / アラーム
 
 [`lib/beep.ts`](lib/beep.ts) — WebAudio API を使った再生制御。
@@ -403,6 +420,7 @@ StatusClient のループ制御:
 - `.env.local` は **`.gitignore` で除外**（`.env*` パターン）
 - リポジトリには `.env.local.example` というテンプレートのみ含む
 - 本番デプロイ (Vercel) の環境変数は Vercel ダッシュボードの Environment Variables に登録
+- `LOGIN_ID` と `LOGIN_PASSWORD` はログイン認証に使用するサーバー専用の秘密情報。`NEXT_PUBLIC_` を付けず、Vercel の Production / Preview それぞれに登録する
 - AI ツール (Claude Code 等) を使う場合、`.env.local` をローカルに残さず 1Password 等のシークレットマネージャー経由で注入する運用を推奨
 
 ### 9.2 Supabase の Publishable Key（旧 anon key）
@@ -454,7 +472,12 @@ create policy "anon can update orders" on orders for update to anon using (true)
 Storage の `item-photos` バケットは Supabase ダッシュボード → Storage → Policies で SELECT / INSERT / UPDATE / DELETE を anon に許可。
 
 ### 9.4 認証
-未実装。導入する場合は Supabase Auth を利用し、`authenticated` ロールに権限を移すリファクタが必要。
+
+- `/login` で `LOGIN_ID` / `LOGIN_PASSWORD` を入力してログインする
+- ログイン成功時は HMAC-SHA-256 署名の `HttpOnly` セッション Cookie を発行する
+- `middleware.ts` が未認証の画面アクセスを `/login` へ、未認証の API アクセスを 401 へ振り分ける
+- `/api/auth/login` と `/api/auth/logout` は未認証でもアクセス可能
+- 認証情報が未設定の場合はログインできないため、Vercel へのデプロイ時に必ず登録する
 
 ---
 
@@ -467,8 +490,10 @@ Storage の `item-photos` バケットは Supabase ダッシュボード → Sto
 ### 10.2 環境変数（Vercel）
 - `NEXT_PUBLIC_SUPABASE_URL`
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `LOGIN_ID`
+- `LOGIN_PASSWORD`
 
-両方とも Vercel ダッシュボードの Settings → Environment Variables に登録。
+4 つとも Vercel ダッシュボードの Settings → Environment Variables に登録する。`LOGIN_ID` / `LOGIN_PASSWORD` はクライアントへ公開されないサーバー専用変数として設定する。
 
 ### 10.3 Supabase
 - 無料プラン (Free) で運用中
@@ -519,6 +544,7 @@ Storage の `item-photos` バケットは Supabase ダッシュボード → Sto
 │   ├── RoomSelectionModal.tsx
 │   └── providers.tsx
 ├── lib/
+│   ├── auth.ts              # HMAC 署名セッションとログイン認証
 │   ├── types.ts            # ドメイン型定義
 │   ├── db.ts               # orderStore (Supabase 経由)
 │   ├── itemsDb.ts          # itemsCRUD + 全置換
@@ -552,10 +578,10 @@ Storage の `item-photos` バケットは Supabase ダッシュボード → Sto
 
 ## 12. 既知の制約・運用上の注意
 
-### 12.1 認証なし運用
-- URL を知っていれば誰でも全機能を利用可能
-- RLS で「削除はできない」「想定範囲を超えた操作はできない」という最低限の防御は敷いているが、入力データそのもの（依頼内容など）は誰でも自由に投入できる
-- 本番運用時は認証を入れる前提
+### 12.1 ログイン認証
+- `LOGIN_ID` / `LOGIN_PASSWORD` は Vercel の Environment Variables で管理し、ソースコードや `NEXT_PUBLIC_` 変数には記載しない
+- 認証はアプリケーション層の共通ログインであり、Supabase のユーザー単位認証やロール分離ではない
+- セッション Cookie はサーバー側で検証される。パスワード変更時は環境変数を更新して再デプロイする
 
 ### 12.2 依頼の削除は不可
 - UI 上からも、anon ロールでも、orders を削除できない
@@ -591,7 +617,7 @@ Storage の `item-photos` バケットは Supabase ダッシュボード → Sto
 優先度高めから順に。
 
 ### 13.1 認証・ロール分離
-- Supabase Auth 導入（メール、または院内 SSO 連携）
+- 現在は共通 ID / パスワード認証のため、必要に応じて Supabase Auth または院内 SSO を導入する
 - ロール: `anon`（未使用化） / `operator` (OP 室) / `supply` (サプライ課) / `admin` (マスタ管理)
 - RLS ポリシーを `authenticated` 向けに書き換え
 
@@ -645,8 +671,9 @@ Storage の `item-photos` バケットは Supabase ダッシュボード → Sto
 - URL の `?v=` クエリ（updated_at）が付与されているか
 
 ### 14.4 Realtime が接続しない
-- Supabase ダッシュボードで該当テーブルの Realtime が ON か
+- Supabase ダッシュボードで items / procedures / orders の Realtime が ON か
 - RLS で SELECT が許可されているか
+- ブラウザ用クライアントの Realtime 設定と対象テーブル名が現行コードと一致しているか
 - ブラウザのコンソールで Realtime のエラーが出ていないか
 
 ### 14.5 依頼を送信できない
