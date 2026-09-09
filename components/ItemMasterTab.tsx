@@ -52,21 +52,29 @@ export function ItemMasterTab({ defaultItems }: Props) {
     return Array.from(set).sort();
   }, [items]);
 
+  const shelves = useMemo(() => {
+    const set = new Set<string>();
+    for (const it of items) if (it.shelf) set.add(it.shelf);
+    return Array.from(set).sort();
+  }, [items]);
+
   const [categoryFilter, setCategoryFilter] = useState("");
+  const [shelfFilter, setShelfFilter] = useState("");
 
   const filtered = useMemo(() => {
     const q = filter.trim().toLowerCase();
     return items.filter((i) => {
       if (categoryFilter && i.category !== categoryFilter) return false;
+      if (shelfFilter && i.shelf !== shelfFilter) return false;
       if (!q) return true;
       const hay = `${i.code} ${i.name} ${i.spec} ${i.shelf} ${i.memo} ${i.category ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [items, filter, categoryFilter]);
+  }, [items, filter, categoryFilter, shelfFilter]);
 
   useEffect(() => {
     setListPage(0);
-  }, [filter, categoryFilter, items]);
+  }, [filter, categoryFilter, shelfFilter, items]);
 
   const goToListPage = (nextPage: number) => {
     setListPage(nextPage);
@@ -350,6 +358,20 @@ export function ItemMasterTab({ defaultItems }: Props) {
               {categories.map((c) => (
                 <option key={c} value={c}>
                   {c}
+                </option>
+              ))}
+            </select>
+          )}
+          {shelves.length > 0 && (
+            <select
+              value={shelfFilter}
+              onChange={(e) => setShelfFilter(e.target.value)}
+              className="rounded border border-ink-line bg-white px-2 py-2 text-sm sm:py-1.5"
+            >
+              <option value="">すべての棚番</option>
+              {shelves.map((s) => (
+                <option key={s} value={s}>
+                  {s}
                 </option>
               ))}
             </select>
