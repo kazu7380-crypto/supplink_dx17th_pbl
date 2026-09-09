@@ -44,6 +44,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState<string | null>(null);
   const [listPage, setListPage] = useState(0);
+  const listRef = useRef<HTMLUListElement>(null);
 
   const categories = useMemo(() => {
     const set = new Set<string>();
@@ -66,6 +67,16 @@ export function ItemMasterTab({ defaultItems }: Props) {
   useEffect(() => {
     setListPage(0);
   }, [filter, categoryFilter, items]);
+
+  const goToListPage = (nextPage: number) => {
+    setListPage(nextPage);
+    // スクロール処理は useEffect で実行
+    if (listRef.current) {
+      setTimeout(() => {
+        listRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 0);
+    }
+  };
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / ITEM_LIST_PAGE_SIZE));
   const visibleItems = filtered.slice(
@@ -348,7 +359,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
           </span>
         </div>
 
-        <ul className="space-y-2">
+        <ul ref={listRef} className="space-y-2">
           {visibleItems.map((it) => {
             const open = expandedCode === it.code;
             return (
@@ -419,7 +430,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
           <div className="mt-4 flex items-center justify-center gap-3 text-sm">
             <button
               type="button"
-              onClick={() => setListPage((page) => Math.max(0, page - 1))}
+              onClick={() => goToListPage(Math.max(0, listPage - 1))}
               disabled={listPage === 0}
               className="rounded border border-ink-line bg-white px-3 py-1.5 text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -430,7 +441,7 @@ export function ItemMasterTab({ defaultItems }: Props) {
             </span>
             <button
               type="button"
-              onClick={() => setListPage((page) => Math.min(pageCount - 1, page + 1))}
+              onClick={() => goToListPage(Math.min(pageCount - 1, listPage + 1))}
               disabled={listPage >= pageCount - 1}
               className="rounded border border-ink-line bg-white px-3 py-1.5 text-ink-soft hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
             >

@@ -137,6 +137,14 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
     setPage(1);
   }, [dateFilter, statusFilter, roomFilter, departmentFilter]);
 
+  const goToPage = (nextPage: number) => {
+    setPage(nextPage);
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(Math.max(1, page), totalPages);
   const paged = filtered.slice(
@@ -296,7 +304,7 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
               totalPages={totalPages}
               total={filtered.length}
               pageSize={PAGE_SIZE}
-              onPageChange={setPage}
+              onPageChange={goToPage}
             />
           )}
           <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">
@@ -310,7 +318,7 @@ export function HistoryClient({ items: defaultItems, initialOrders }: Props) {
               totalPages={totalPages}
               total={filtered.length}
               pageSize={PAGE_SIZE}
-              onPageChange={setPage}
+              onPageChange={goToPage}
             />
           )}
         </>
